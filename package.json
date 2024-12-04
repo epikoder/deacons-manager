@@ -1,0 +1,33 @@
+{
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@supabase/postgrest-js": "^1.16.2",
+    "@types/bun": "^1.1.11",
+    "@types/toastify-js": "^1.12.3",
+    "@vitejs/plugin-react": "^4.3.2",
+    "autoprefixer": "^10.4.20",
+    "chart.js": "^4.4.6",
+    "jose": "^5.9.4",
+    "libphonenumber-js": "^1.11.12",
+    "postcss": "^8.4.47",
+    "rc-virtual-list": "^3.15.0",
+    "react": "^18.3.1",
+    "react-chartjs-2": "^5.2.0",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^3.4.13",
+    "toastify-js": "^1.12.0",
+    "vike-react": "^0.5.7"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vike": "^0.4.198",
+    "vite": "^5.4.8",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0"
+  },
+  "type": "module"
+}
