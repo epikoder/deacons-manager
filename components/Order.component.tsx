@@ -356,28 +356,33 @@ const ActionUpdateDeliveryStatus = () => {
 const __UpdateDeliveryStatus = forwardRef(
   ({ order }: { order: Order }, ref) => {
     const [status, setStatus] = useState(order.deliveryStatus);
-    const [amount, setChargeAmount] = useState(order.deliveryCost);
+    const [amount, setChargeAmount] = useState(order.deliveryCost ?? 0);
+    const [books, setBooks] = useState<BookConfig>({});
 
     const multiSelectRef = useRef<{ getItems: () => BookConfig }>();
     useImperativeHandle(ref, () => ({
-      onContinue: () => {
-        if (!status || (status == "delivered" && (amount ?? 0) <= 0)) {
+      onContinue: async () => {
+        if (!status || (status == "delivered" && amount <= 0)) {
           Toast.error("Please enter delivery charge");
           throw new Error();
         }
 
-        const subs = multiSelectRef.current?.getItems() ?? {};
         const max = getMax(order.agent!);
 
-        for (const [name, count] of Object.entries(subs)) {
+        for (const [name, count] of Object.entries(books)) {
           if ((max[name] ?? 0) < count) {
             Toast.error(`Not enough ${name}`);
             throw new Error();
           }
         }
 
-        if (subs) {
-          order!.setBookConfiguration(subs);
+        if (!order!.isConfigValidForPaidAmount(books, amount)) {
+          Toast.error(`Books exceed order amount`);
+          throw new Error();
+        }
+
+        if (books) {
+          await order!.setBookConfiguration(books);
         }
         order!.updateDelivery(status, amount);
       },
@@ -399,7 +404,8 @@ const __UpdateDeliveryStatus = forwardRef(
 
     const [isValid, setIsValid] = useState(true);
 
-    const _computeValidity = (books: BookConfig) => {
+    const _compute = (books: BookConfig) => {
+      setBooks(multiSelectRef.current?.getItems() ?? {});
       for (const k of Object.keys(books)) {
         if (order.agent!.books[k] < books[k] || !order.agent!.books[k]) {
           return setIsValid(false);
@@ -468,13 +474,22 @@ const __UpdateDeliveryStatus = forwardRef(
               defaultValue={getDefault(order!)}
               showDelivered={status === "delivered"}
               max={getMax(order.agent)}
-              onChange={_computeValidity}
+              onChange={_compute}
             />
             {!isValid && (
               <div className="flex gap-3 items-center">
                 <InfoIcon className="size-4 text-red-500" />
                 <span className="text-xs font-semibold text-red-500">
                   Agent is missing one / more book
+                </span>
+              </div>
+            )}
+
+            {!order.isConfigValidForPaidAmount(books, amount) && (
+              <div className="flex gap-3 items-center">
+                <InfoIcon className="size-4 text-red-500" />
+                <span className="text-xs font-semibold text-red-500">
+                  Cost has exceeded paid amount
                 </span>
               </div>
             )}
@@ -614,6 +629,15 @@ const ShowAmount = () => {
                 <PenIcon className="size-3 text-green-500" />
               </button>
             )}
+          </div>
+          <div className="mt-4">
+            <span className="font-semibold">
+              Cost:
+            </span>
+            &nbsp;
+            <span>
+              {order!.actualCost.asLocalCurrency()}
+            </span>
           </div>
           {order!.actualCost > order!.orderAmount && (
             <div className="flex items-center gap-1 py-3 text-red-500 text-xs">

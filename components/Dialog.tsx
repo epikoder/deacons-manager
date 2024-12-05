@@ -54,12 +54,12 @@ export const showAlertDialog = ({
               className={
                 "text-center py-1 bg-green-500 text-white w-full rounded-br-lg"
               }
-              onClick={() => {
+              onClick={async () => {
                 try {
-                  onContinue();
+                  await onContinue();
                   closeFn();
                 } catch (_) {
-                  console.debug(_);
+                  console.debug("Dialog",_);
                 }
               }}
             >

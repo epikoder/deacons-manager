@@ -19,15 +19,17 @@ const Input = forwardRef(
 
     return (
       <div
-        className={`rounded-md border ${_isvalid() ? "border-gray-500" : "border-red-500"
-          } px-2 focus-within:border-2 text-sm ${resetSize ? '' : 'w-full'}`}
+        className={`rounded-md border ${
+          _isvalid() ? "border-gray-500" : "border-red-500"
+        } px-2 focus-within:border-2 text-sm ${resetSize ? "" : "w-full"}`}
       >
         <input
           ref={ref as ForwardedRef<HTMLInputElement>}
           placeholder=""
           {...inputProps}
-          className={`outline-none hover:outline-none py-1 ${resetSize ? "" : "min-w-44"
-            } w-full ${className}`}
+          className={`outline-none hover:outline-none py-1 ${
+            resetSize ? "" : "min-w-32"
+          } w-full ${className}`}
           onBlur={(ev) => {
             inputProps.onBlur && inputProps.onBlur(ev);
             setTxt(ev.currentTarget.value);
