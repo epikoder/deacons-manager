@@ -176,8 +176,16 @@ export default class Order extends Observer {
     return this._totalCost(this.totalBookCost());
   }
 
-  private _totalCost(totalCostOfBooks: number) {
-    return (this._inner.delivery_cost ?? 0) + totalCostOfBooks +
+  public isConfigValidForPaidAmount(books: BookConfig, delivery_cost: number) {
+    const cost = Object.entries(books).map(([_, count]) =>
+      count * (OrderService.instance.costPerBook)
+    ).sum();
+    return this.orderAmount > this._totalCost(cost, delivery_cost);
+  }
+
+  private _totalCost(totalCostOfBooks: number, delivery_cost?: number) {
+    return (delivery_cost ?? this._inner.delivery_cost ?? 0) +
+      totalCostOfBooks +
       (this.officeCharge ?? 0);
   }
 

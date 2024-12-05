@@ -31,6 +31,7 @@ export default class OrderService extends SubscriberProvider<Order[]> {
   private _totalOrders = 0;
   private _loading = false;
   private _costPerBook = 1200;
+  private _timeout?: ReturnType<typeof setTimeout>;
 
   get lastRefreshTimeStamp(): SourceTimeStamp {
     return this._lastRefreshTimeStamp;
@@ -98,8 +99,12 @@ export default class OrderService extends SubscriberProvider<Order[]> {
     });
   }
 
+  public stopBackgroundPull() {
+    clearTimeout(this._timeout);
+  }
+
   private async backgroundRefresh() {
-    setTimeout(async () => {
+    this._timeout = setTimeout(async () => {
       await this.fetchOrderFromSource();
       this.backgroundRefresh();
     }, this._fetchInterval);

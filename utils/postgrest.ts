@@ -11,6 +11,7 @@ import { POSTGRES_URI } from "../pages/credentials.shared";
 import { AUTH_KEY, saveAuthToken } from "./auth";
 import { navigate } from "vike/client/router";
 import { PG_UNAUTHORIZED } from "./constants";
+import OrderService from "../services/orders.service/orders.service";
 
 const postgrest = new PostgrestClient(POSTGRES_URI);
 
@@ -71,6 +72,7 @@ export class WithAuth<
               );
               let newResponse = await this._inner;
               if (newResponse.error?.code == PG_UNAUTHORIZED) {
+                OrderService.instance.stopBackgroundPull();
                 navigate("/login");
               }
               resolve(newResponse);

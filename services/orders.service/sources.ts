@@ -48,6 +48,9 @@ const sourceUsingJamb_Waec = (url: string): OrderSource => {
             do {
                 const rs = await fetch(formatQuery(url, param));
                 const orders = await rs.json();
+                if (rs.status != 200) {
+                    return [];
+                }
                 const _data = (orders as any[]).map((v) => ({
                     id: v.id,
                     address: v.address,
@@ -55,7 +58,7 @@ const sourceUsingJamb_Waec = (url: string): OrderSource => {
                     email: v.email,
                     fullname: v.fullname,
                     phone: v.phone,
-                    state: v.state == 'Cross River' ? 'Cross River' : v.state,
+                    state: v.state.includes("cross") ? "Cross River" : v.state,
                     ...generateItemAndAmount(v),
                 } satisfies Awaited<ReturnType<OrderSource>>[number]));
                 results = results.concat(_data);
