@@ -6,12 +6,11 @@ import { postgrest, WithAuth } from "../../../../utils/postgrest";
 import { PG_DUPLICATE } from "../../../../utils/constants";
 import AgentService from "../../../../services/agents.service";
 import { navigate } from "vike/client/router";
-import { MultiSelect, MultiSelectItem, SourceSelector } from "../../../../components/Select";
-import OrderService from "../../../../services/orders.service/orders.service";
+import { SourceSelector } from "../../../../components/Select";
 import { useOrders } from "../../../../services/orders.service/hook";
 
 export default function () {
-    useOrders()
+    useOrders();
     const selectorRef = useRef<{ getSelectedItems: () => Set<string> }>(null);
     const [message, setMessage] = useState<[NullString, boolean]>([
         null,
@@ -21,7 +20,7 @@ export default function () {
         fullname: "",
         phone: "",
         email: "",
-        source_list: []
+        source_list: [],
     });
 
     const onSubmit = async (ev: FormEvent) => {
@@ -29,7 +28,9 @@ export default function () {
         ev.preventDefault();
         if (!isValid) return;
 
-        form.source_list = [...selectorRef.current?.getSelectedItems().values() ?? []]
+        form.source_list = [
+            ...selectorRef.current?.getSelectedItems().values() ?? [],
+        ];
         const { error } = await new WithAuth(
             postgrest.from("affiliates").insert(form),
         ).unwrap();
@@ -41,7 +42,7 @@ export default function () {
         }
         setMessage(["Created successfully, please wait...", true]);
         AgentService.instance.fetch();
-        setTimeout(() => navigate('/affiliates'), 500)
+        setTimeout(() => navigate("/affiliates"), 500);
     };
 
     const _onFormChange = (
@@ -51,15 +52,16 @@ export default function () {
     return (
         <form
             onSubmit={onSubmit}
-            className="flex flex-col gap-3 max-w-60 mx-auto px-3 py-8"
+            className="flex flex-col gap-3 max-w-md mx-auto px-3 py-16"
         >
-            <div className="text-center">
+            <div className="text-center py-4">
                 Create New Affiliate
             </div>
             {message[0] && (
                 <div
-                    className={`${message[1] ? "text-blue-500" : "text-red-500"
-                        } text-xs text-center`}
+                    className={`${
+                        message[1] ? "text-blue-500" : "text-red-500"
+                    } text-xs text-center`}
                 >
                     {message[0]}
                 </div>
