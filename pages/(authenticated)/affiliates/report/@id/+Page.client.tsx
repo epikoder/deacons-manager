@@ -1,16 +1,16 @@
 import { useData } from "vike-react/useData";
-import { Agent } from "../../../../../services/agents.service";
 import { useObserver } from "../../../../../@types/observable";
 import { useEffect, useRef, useState } from "react";
 import { postgrest, WithAuth } from "../../../../../utils/postgrest";
 import Carbon from "../../../../../utils/carbon";
 import Order from "../../../../../services/orders.service/order";
 import printer from "../../../../../utils/printer";
+import { Affiliate } from "../../../../../services/affiliate.service";
 
 export default function () {
-  const { agent } = useData<{ agent?: Agent }>();
-  if (!agent) return <div>NOT FOUND</div>;
-  useObserver(agent);
+  const { affiliate } = useData<{ affiliate?: Affiliate }>();
+  if (!affiliate) return <div>NOT FOUND</div>;
+  useObserver(affiliate);
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<Order[]>([]);
   const [month, setMonth] = useState<number | undefined>();
@@ -22,9 +22,9 @@ export default function () {
     let range: [number, number] | undefined = [0, 1];
     let result: IOrder[] = [];
     do {
-      const query = postgrest.from("orders").select("*", { count: "exact" }).eq(
-        "agent_id",
-        agent.ID,
+      const query = postgrest.from("orders").select("*", { count: "exact" }).in(
+        "source",
+        affiliate.source,
       ).not("delivered_on", "is", null).range(...range);
       if (month) {
         query.gte("delivered_on", Carbon.fromMonth(month).formatLocalISO()).lte(
@@ -62,7 +62,7 @@ export default function () {
         ref={titleRef}
         className="p-4 w-fit mx-auto gap-4 items-center"
       >
-        <div>Delivered Orders Report for: {agent.name}</div>
+        <div>Delivered Orders Report for: {affiliate.name}</div>
         <select
           defaultValue={month}
           onChange={(ev) => setMonth(parseInt(ev.currentTarget.value))}
@@ -92,11 +92,11 @@ export default function () {
           className="rounded-md px-5 py-1 text-white bg-green-500 text-sm"
           onClick={() => {
             let el = document.createElement("div");
-            const ti=titleRef.current!.cloneNode(true);
-            (ti as HTMLElement).style.marginBottom = '30px'
+            const ti = titleRef.current!.cloneNode(true);
+            (ti as HTMLElement).style.marginBottom = "30px";
             el.append(ti);
             el.append(tableRef.current!.cloneNode(true));
-            console.log(el)
+            console.log(el);
             printer(el.cloneNode(true) as HTMLElement);
           }}
         >
@@ -148,7 +148,7 @@ export default function () {
                   {o.deliveredOn ? o.deliveredOn.format() : "-"}
                 </td>
                 <td>
-                  {o.deliveryCost ? o.deliveryCost.asLocalCurrency() : "-"}
+                  {o.affiliateEarning}
                 </td>
               </tr>
             ))}
@@ -165,7 +165,7 @@ export default function () {
                 Total:
               </td>
               <td className="font-semibold">
-                {orders.map((o) => o.deliveryCost).sum().asLocalCurrency()}
+                {orders.map((o) => o.affiliateEarning).sum().asLocalCurrency()}
               </td>
             </tr>
           </tbody>

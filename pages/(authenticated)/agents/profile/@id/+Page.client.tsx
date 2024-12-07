@@ -14,7 +14,6 @@ import { ArcElement, Chart, registerables } from "chart.js";
 import { postgrest, WithAuth } from "../../../../../utils/postgrest";
 import Carbon, { Month } from "../../../../../utils/carbon";
 import { SelectMonth, SubjectSelect } from "../../../../../components/Select";
-import { useLoadBookDistribution } from "../../../../../hooks/useLoadBookDistribution";
 import Button from "../../../../../components/Button";
 import { showAlertDialog } from "../../../../../components/Dialog";
 import DropDown from "../../../../../components/Dropdown";
@@ -56,7 +55,6 @@ export default function () {
         delivered_count: 0,
         order_count: 0,
         pending_count: 0,
-        shipped_count: 0,
         ...((res1.data ?? []) as DayStats[]).find((v) => v.day == date),
       };
       return stat;
@@ -86,7 +84,6 @@ export default function () {
         delivered_count: 0,
         order_count: 0,
         pending_count: 0,
-        shipped_count: 0,
         ...((res2.data ?? []) as MonthStats[]).find((v) => v.month == date),
       };
       return stat;
@@ -142,26 +139,7 @@ export default function () {
       </div>
 
       <div className="rounded-lg p-3 shadow-md">
-        <DropDown className="flex flex-col gap-4">
-          {(isOpen) => [
-            <div className="text-xs cursor-pointer flex items-center gap-3 w-fit">
-              <span className="font-semibold">Recent Orders</span>
-              <span className="relative size-5">
-                <ChevronDown
-                  className={`absolute transition-all duration-300 ${
-                    isOpen ? "opacity-0" : ""
-                  }`}
-                />
-                <ChevronUp
-                  className={`absolute transition-all duration-300 ${
-                    !isOpen ? "opacity-0" : ""
-                  }`}
-                />
-              </span>
-            </div>,
-            <RecentOrders id={agent.ID} />,
-          ]}
-        </DropDown>
+        <RecentOrders id={agent.ID} />
       </div>
 
       <div className="flex flex-col gap-3 p-4 shadow-md rounded-lg">
@@ -204,8 +182,6 @@ export default function () {
                   font: { size: 14, weight: "bold" },
                   text: `pending: ${
                     dayStats.map((v) => v.pending_count).sum()
-                  } / shipped: ${
-                    dayStats.map((v) => v.shipped_count).sum()
                   } / Delivered: ${
                     dayStats.map((v) => v.delivered_count).sum()
                   }`,
@@ -232,10 +208,6 @@ export default function () {
                 {
                   label: "Pending",
                   data: dayStats.map((v) => v.pending_count),
-                },
-                {
-                  label: "Shipped",
-                  data: dayStats.map((v) => v.shipped_count),
                 },
                 {
                   label: "Delivered",
@@ -280,8 +252,6 @@ export default function () {
                   font: { size: 14, weight: "bold" },
                   text: `pending: ${
                     monthStats.map((v) => v.pending_count).sum()
-                  } / shipped: ${
-                    monthStats.map((v) => v.shipped_count).sum()
                   } / Delivered: ${
                     monthStats.map((v) => v.delivered_count).sum()
                   }`,
@@ -302,10 +272,6 @@ export default function () {
                 {
                   label: "Pending",
                   data: monthStats.map((v) => v.pending_count),
-                },
-                {
-                  label: "Shipped",
-                  data: monthStats.map((v) => v.shipped_count),
                 },
                 {
                   label: "Delivered",
@@ -395,8 +361,34 @@ const RecentOrders = ({ id }: { id: string }) => {
     .slice(0, 10);
 
   return (
-    <Fragment>
-      {orders.map((order) => <OrderComponent key={order.ID} order={order} />)}
-    </Fragment>
+    <DropDown className="flex flex-col gap-4">
+      {(isOpen) => [
+        <div className="text-xs cursor-pointer flex items-center gap-3 w-fit">
+          <span className="font-semibold">
+            Pending orders -- {orders.length}
+          </span>
+          <span className="relative size-5">
+            <ChevronDown
+              className={`absolute transition-all duration-300 ${
+                isOpen ? "opacity-0" : ""
+              }`}
+            />
+            <ChevronUp
+              className={`absolute transition-all duration-300 ${
+                !isOpen ? "opacity-0" : ""
+              }`}
+            />
+          </span>
+        </div>,
+        <Fragment>
+          {orders.map((order) => (
+            <OrderComponent
+              key={order.ID}
+              order={order}
+            />
+          ))}
+        </Fragment>,
+      ]}
+    </DropDown>
   );
 };

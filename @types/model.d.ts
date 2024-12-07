@@ -1,5 +1,6 @@
 interface User {
   fullname: string;
+  email: string;
 }
 
 type DeliveryStatus = "pending" | "delivered";
@@ -61,7 +62,6 @@ interface DayStats {
   day: string;
   order_count: number;
   pending_count: number;
-  shipped_count: number;
   delivered_count: number;
 }
 
@@ -69,6 +69,5 @@ interface MonthStats {
   month: string;
   order_count: number;
   pending_count: number;
-  shipped_count: number;
   delivered_count: number;
 }

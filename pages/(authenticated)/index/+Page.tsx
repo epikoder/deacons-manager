@@ -21,10 +21,15 @@ import {
   ScriptableLineSegmentContext,
 } from "chart.js";
 import Carbon from "../../../utils/carbon";
+import Expanded from "../../../components/Expanded";
 
 export default function () {
   const context = usePageContext();
-  const [books, setBooks] = useState<BookConfig>({});
+  const [books, setBooks] = useState<
+    Required<(Pick<IAgent, "books" | "id"> & { name: string })>[]
+  >(
+    [],
+  );
   const _loadBooksDistribution = useLoadBookDistribution();
   useEffect(() => {
     _loadBooksDistribution().then((data) => setBooks(data));
@@ -63,21 +68,27 @@ export default function () {
         </DropDown>
       </div>
       <div className="flex flex-col gap-3 p-4 shadow-md rounded-lg">
-        <div className="font-semibold">Books with agents</div>
-        <div className="flex flex-wrap gap-4">
-          {Object.entries(books)
-            .filter(([name, count]) => count > 0)
-            .sort(([a], [b]) => a.charCodeAt(0) - b.charCodeAt(0))
-            .map(([name, count]) => (
-              <div key={name} className="text-sm">
-                {name} : {count ?? 0}
-              </div>
-            ))}
-        </div>
-        {Object.entries(books)
-          .filter(([name, count]) => count > 0).isEmpty() && (
-          <div className="text-center">-- no books --</div>
-        )}
+        <Expanded>
+          <div className="font-semibold text-center">Agents & Books</div>
+          {books.map((bc) => (
+            <div key={bc.id} className="flex flex-wrap gap-4">
+              <span className="font-semibold underline">
+                {bc.name}
+              </span>
+              {Object.entries(bc.books)
+                .filter(([name, count]) =>
+                  count > 0
+                )
+                .sort(([a], [b]) => a.charCodeAt(0) - b.charCodeAt(0))
+                .map(([name, count]) => (
+                  <div key={name} className="text-sm">
+                    {name} : {count ?? 0}
+                  </div>
+                ))}
+            </div>
+          ))}
+          {books.isEmpty() && <div className="text-center">-- no books --</div>}
+        </Expanded>
       </div>
       <UserMetric />
       <OrderMetricBySource />

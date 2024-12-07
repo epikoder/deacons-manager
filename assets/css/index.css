@@ -35,7 +35,7 @@ body {
     cursor: not-allowed;
 }
 
-.ripple > span.effect {
+.ripple>span.effect {
     position: absolute;
     border-radius: 50%;
     transform: scale(0);
@@ -52,4 +52,64 @@ body {
 
 .rc-virtual-list-holder-inner {
     gap: 20px;
+}
+
+table.custom-table {
+    border-collapse: separate !important;
+    border-spacing: 0px;
+}
+
+table.custom-table thead {
+    position: sticky;
+    top: 0;
+    background-color: #ffffff;
+    z-index: 1;
+}
+
+table.custom-table thead>tr>th {
+    padding: 5px 10px;
+    border-right: 1px solid black;
+    border-top: 1px solid black;
+    border-bottom: 1px solid black;
+    min-width: 100px;
+}
+
+
+table.custom-table thead>tr>th:first-child {
+    min-width: 30px;
+    position: sticky;
+    left: 0;
+    background: #ffffff;
+    border-left-style: solid;
+    border-left-color: black;
+    border-left-width: 1px;
+    border-right-style: solid;
+    border-right-color: black;
+    border-right-width: 2px;
+}
+
+table.custom-table tbody>tr>td {
+    padding: 10px 5px;
+    border-bottom-style: solid;
+    border-bottom-color: black;
+    border-bottom-width: 1px;
+    border-right-style: solid;
+    border-right-color: black;
+    border-right-width: 1px;
+}
+
+table.custom-table tbody>tr>td:first-child {
+    position: sticky;
+    left: 0;
+    background: #ffffff;
+    border-left-style: solid;
+    border-left-color: black;
+    border-left-width: 1px;
+    border-right-style: solid;
+    border-right-color: black;
+    border-right-width: 2px;
+}
+
+table.custom-table tr {
+    position: relative;
 }

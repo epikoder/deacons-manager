@@ -1,4 +1,4 @@
-abstract class SubscriberProvider<T> {
+abstract class SubscriberProvider<T = undefined> {
     private subscribers: ((inner: T) => void)[] = [];
 
     subscribe(subscriber: (inner: T) => void) {

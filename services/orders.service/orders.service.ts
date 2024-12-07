@@ -19,6 +19,12 @@ const sourceAsID = (s: string) => {
     .replace(/^(\s|\s+)/g, "-");
 };
 
+class OrderServiceNotification extends SubscriberProvider {
+  notify() {
+    this.notifySubscribers(undefined);
+  }
+}
+
 export default class OrderService extends SubscriberProvider<Order[]> {
   private _fetchInterval: number = 60000; // sec
   private _sources: Map<string, OrderSource> = new Map();
@@ -32,6 +38,8 @@ export default class OrderService extends SubscriberProvider<Order[]> {
   private _loading = false;
   private _costPerBook = 1200;
   private _timeout?: ReturnType<typeof setTimeout>;
+  public notification: OrderServiceNotification =
+    new OrderServiceNotification();
 
   get lastRefreshTimeStamp(): SourceTimeStamp {
     return this._lastRefreshTimeStamp;
@@ -51,6 +59,10 @@ export default class OrderService extends SubscriberProvider<Order[]> {
 
   get loading() {
     return this._loading;
+  }
+
+  get bucket(): Bucket<Order> {
+    return this._orders;
   }
 
   public get costPerBook() {
@@ -150,12 +162,12 @@ export default class OrderService extends SubscriberProvider<Order[]> {
 
     const res = await Promise.all(promises);
 
-    let s = performance.now();
     for (const orders of res) {
       const o = orders.at(0);
       if (!o) continue;
       const timestamp = this.lastRefreshTimeStamp[sourceAsID(o.source)];
       this.updateOrders(orders, timestamp);
+      this.notification.notify();
       this.lastRefreshTimeStamp[sourceAsID(o.source)] = new Carbon();
     }
     this.updateLastTimeStamp();
@@ -245,17 +257,15 @@ export default class OrderService extends SubscriberProvider<Order[]> {
     this.updateOrders(data as IOrder[], new Carbon());
   }
 
-  private updateOrders(orders: IOrder[], timestamp: Carbon) {
-    new Promise(() => {
-      orders
-        .reverse()
-        .map((v) => new Order(v, timestamp))
-        .forEach((o) => {
-          o.subscribe(() => this.notifySubscribers(this.orders));
-          this._orders.add(o);
-        });
-      this.notifySubscribers(this.orders);
-    });
+  private async updateOrders(orders: IOrder[], timestamp: Carbon) {
+    orders
+      .reverse()
+      .map((v) => new Order(v, timestamp))
+      .forEach((o) => {
+        o.subscribe(() => this.notifySubscribers(this.orders)); // register subscriber at order level
+        this._orders.add(o);
+      });
+    this.notifySubscribers(this.orders);
   }
 
   public async deleteOrder(order: Order) {

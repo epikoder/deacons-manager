@@ -4,7 +4,7 @@ import { CopyIcon, PhoneIcon } from "../../../../../components/Icons";
 import { useEffect, useRef, useState } from "react";
 import { Bar } from "react-chartjs-2";
 import "chart.js/auto";
-import { Chart, registerables, ArcElement } from "chart.js";
+import { ArcElement, Chart, registerables } from "chart.js";
 import { postgrest, WithAuth } from "../../../../../utils/postgrest";
 import Carbon, { Month } from "../../../../../utils/carbon";
 import { Affiliate } from "../../../../../services/affiliate.service";
@@ -46,7 +46,6 @@ export default function () {
         delivered_count: 0,
         order_count: 0,
         pending_count: 0,
-        shipped_count: 0,
         ...((res1.data ?? []) as DayStats[]).find((v) => v.day == date),
       };
       return stat;
@@ -76,7 +75,6 @@ export default function () {
         delivered_count: 0,
         order_count: 0,
         pending_count: 0,
-        shipped_count: 0,
         ...((res2.data ?? []) as MonthStats[]).find((v) => v.month == date),
       };
       return stat;
@@ -132,12 +130,18 @@ export default function () {
                 title: {
                   display: true,
                   font: { size: 16, weight: "bold" },
-                  text: `Orders for ${Carbon.monthString(month)}: ${dayStats.map((v) => v.order_count).sum()}`,
+                  text: `Orders for ${Carbon.monthString(month)}: ${
+                    dayStats.map((v) => v.order_count).sum()
+                  }`,
                 },
                 subtitle: {
                   display: true,
                   font: { size: 14, weight: "bold" },
-                  text: `pending: ${dayStats.map((v) => v.pending_count).sum()} / shipped: ${dayStats.map((v) => v.shipped_count).sum()} / Delivered: ${dayStats.map((v) => v.delivered_count).sum()}`,
+                  text: `pending: ${
+                    dayStats.map((v) => v.pending_count).sum()
+                  } / Delivered: ${
+                    dayStats.map((v) => v.delivered_count).sum()
+                  }`,
                 },
               },
               scales: {
@@ -155,16 +159,12 @@ export default function () {
                   .toDateString()
                   .split(" ")
                   .slice(0, 3)
-                  .join(" "),
+                  .join(" ")
               ),
               datasets: [
                 {
                   label: "Pending",
                   data: dayStats.map((v) => v.pending_count),
-                },
-                {
-                  label: "Shipped",
-                  data: dayStats.map((v) => v.shipped_count),
                 },
                 {
                   label: "Delivered",
@@ -202,12 +202,18 @@ export default function () {
                 title: {
                   display: true,
                   font: { size: 16, weight: "bold" },
-                  text: `Orders for ${"2024"}: ${monthStats.map((v) => v.order_count).sum()}`,
+                  text: `Orders for ${"2024"}: ${
+                    monthStats.map((v) => v.order_count).sum()
+                  }`,
                 },
                 subtitle: {
                   display: true,
                   font: { size: 14, weight: "bold" },
-                  text: `pending: ${monthStats.map((v) => v.pending_count).sum()} / shipped: ${monthStats.map((v) => v.shipped_count).sum()} / Delivered: ${monthStats.map((v) => v.delivered_count).sum()}`,
+                  text: `pending: ${
+                    monthStats.map((v) => v.pending_count).sum()
+                  } / Delivered: ${
+                    monthStats.map((v) => v.delivered_count).sum()
+                  }`,
                 },
               },
               scales: {
@@ -225,10 +231,6 @@ export default function () {
                 {
                   label: "Pending",
                   data: monthStats.map((v) => v.pending_count),
-                },
-                {
-                  label: "Shipped",
-                  data: monthStats.map((v) => v.shipped_count),
                 },
                 {
                   label: "Delivered",
@@ -251,36 +253,44 @@ const Earning = ({ affiliate }: { affiliate: Affiliate }) => {
   }, [year]);
 
   return (
-    <div className="text-zinc-600 flex flex-col gap-1">
-      <select
-        defaultValue={year}
-        onChange={(ev) => setYear(parseInt(ev.currentTarget.value))}
-        className="outline-none text-xs w-fit"
-      >
-        {Array.from(Array(new Carbon().getFullYear() - 2024 + 1).keys()).map(
-          (k) => (
-            <option
-              key={new Carbon().getFullYear() - k}
-              value={new Carbon().getFullYear() - k}
-            >
-              {new Carbon().getFullYear() - k}
-            </option>
-          ),
-        )}
-      </select>
-      <div>
-        <span className="font-semibold text-2xl">
-          {affiliate.balance[0].asLocalCurrency()}
-        </span>
-        &nbsp;
-        <span className="text-xs">{new Carbon().month}</span>
-        &nbsp;
-        <span>/</span>
-        &nbsp;
-        <span>{affiliate.balance[1].asLocalCurrency()}</span>
-        &nbsp;
-        <span className="text-xs">total</span>
+    <div className="flex justify-between items-end">
+      <div className="text-zinc-600 flex flex-col gap-1">
+        <select
+          defaultValue={year}
+          onChange={(ev) => setYear(parseInt(ev.currentTarget.value))}
+          className="outline-none text-xs w-fit"
+        >
+          {Array.from(Array(new Carbon().getFullYear() - 2024 + 1).keys()).map(
+            (k) => (
+              <option
+                key={new Carbon().getFullYear() - k}
+                value={new Carbon().getFullYear() - k}
+              >
+                {new Carbon().getFullYear() - k}
+              </option>
+            ),
+          )}
+        </select>
+        <div>
+          <span className="font-semibold text-2xl">
+            {affiliate.balance[0].asLocalCurrency()}
+          </span>
+          &nbsp;
+          <span className="text-xs">{new Carbon().month}</span>
+          &nbsp;
+          <span>/</span>
+          &nbsp;
+          <span>{affiliate.balance[1].asLocalCurrency()}</span>
+          &nbsp;
+          <span className="text-xs">total</span>
+        </div>
       </div>
+
+      <a href={`/affiliates/report/${affiliate.ID}`}>
+        <div className="text-center text-white bg-cyan-500 text-xs rounded-lg whitespace-nowrap px-4 py-1 hover:bg-opacity-75 w-fit">
+          View Report
+        </div>
+      </a>
     </div>
   );
 };

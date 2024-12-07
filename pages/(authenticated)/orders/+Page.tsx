@@ -187,7 +187,9 @@ export default function () {
       .sort((o, o1) => o.deliveryStatusWeight - o1.deliveryStatusWeight);
     if (filter.has(Filter.delivered)) {
       __ = __.sort(
-        (o, o1) => o1.deliveredOn.getTime() - o.deliveredOn.getTime(),
+        (o, o1) =>
+          (o1.deliveredOn ? o1.deliveredOn.getTime() : 0) -
+          (o.deliveredOn ? o.deliveredOn.getTime() : 0),
       );
     }
     return __;

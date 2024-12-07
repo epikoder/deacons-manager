@@ -4,7 +4,8 @@ Array.prototype.unique = function () {
 Array.prototype.sum = function () {
     let sum = 0;
     for (const v of this ?? []) {
-        sum += Number(v);
+        let n = Number(v);
+        sum += isNaN(n) ? 0 : n;
     }
     return sum;
 };

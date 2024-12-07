@@ -52,7 +52,6 @@ const cummalativeOrderForAffiliateByMonth = async (year?: number) => {
                     delivered_count: 0,
                     order_count: 0,
                     pending_count: 0,
-                    shipped_count: 0,
                 }
             );
         }
@@ -61,7 +60,6 @@ const cummalativeOrderForAffiliateByMonth = async (year?: number) => {
             delivered_count: stat.delivered_count,
             order_count: stat.order_count,
             pending_count: stat.pending_count,
-            shipped_count: stat.shipped_count,
         };
         result[stat.source] = ms;
     }
@@ -87,7 +85,6 @@ const cummalativeOrderByState = async (year?: number) => {
                     delivered_count: 0,
                     order_count: 0,
                     pending_count: 0,
-                    shipped_count: 0,
                 }
             );
         }
@@ -96,7 +93,6 @@ const cummalativeOrderByState = async (year?: number) => {
             delivered_count: stat.delivered_count,
             order_count: stat.order_count,
             pending_count: stat.pending_count,
-            shipped_count: stat.shipped_count,
         };
         result[stat.state] = ms;
     }

@@ -1,9 +1,67 @@
+import { ChangeEvent, useRef, useState } from "react";
 import Input from "../../../../components/Input";
+import { usePageContext } from "vike-react/usePageContext";
+import { postgrest } from "../../../../utils/postgrest";
+import Button from "../../../../components/Button";
 
 export default function () {
-    return <div className="flex flex-col gap-4" >
-        <Input type="password" name="password" autoComplete="current-password" placeholder="current password" />
-        <Input type="password" name="new_password" autoComplete="new-password" placeholder="new password"/>
-        <Input type="password" name="confirm_password" autoComplete="new-password" placeholder="confirm password"/>
-    </div>
+    const [form, setFormState] = useState({
+        password: "",
+        new_password: "",
+        confirm_password: "",
+    });
+    const ref = useRef<HTMLFormElement>(null);
+    const [message, setMessage] = useState<string | null>(null);
+    const context = usePageContext();
+
+    const onSubmit = async () => {
+        const isValid = ref.current?.checkValidity();
+        if (!isValid) return;
+
+        const { data, error } = await postgrest.rpc("login", form);
+        if (error) {
+            setMessage("invalid username or password");
+            return;
+        }
+    };
+
+    const _setFormState = (ev: ChangeEvent<HTMLInputElement>) =>
+        setFormState({ ...form, [ev.target.name]: ev.target.value });
+
+    return (
+        <div className="max-w-screen-sm">
+            <form
+                className="flex flex-col gap-4"
+                onSubmit={(ev) => {
+                    ev.preventDefault();
+                    onSubmit();
+                }}
+            >
+                <Input
+                    type="password"
+                    name="password"
+                    autoComplete="current-password"
+                    placeholder="current password"
+                    onChange={_setFormState}
+                />
+                <Input
+                    type="password"
+                    name="new_password"
+                    autoComplete="new-password"
+                    placeholder="new password"
+                    onChange={_setFormState}
+                />
+                <Input
+                    type="password"
+                    name="confirm_password"
+                    autoComplete="new-password"
+                    placeholder="confirm password"
+                    onChange={_setFormState}
+                />
+                <Button className="bg-green-500">
+                    Change Password
+                </Button>
+            </form>
+        </div>
+    );
 }

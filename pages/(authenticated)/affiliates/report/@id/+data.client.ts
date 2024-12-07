@@ -1,10 +1,10 @@
 import { PageContextClient } from "vike/types";
 import { postgrest, WithAuth } from "../../../../../utils/postgrest";
-import { Agent } from "../../../../../services/agents.service";
+import { Affiliate } from "../../../../../services/affiliate.service";
 
 export const data = async (pageContext: PageContextClient) => {
-    const { data: agent } = await new WithAuth(
-        postgrest.from("agents")
+    const { data: affiliate } = await new WithAuth(
+        postgrest.from("affiliates")
             .select()
             .eq(
                 "id",
@@ -13,6 +13,6 @@ export const data = async (pageContext: PageContextClient) => {
     ).unwrap();
 
     return {
-        agent: agent ? new Agent(agent) : undefined,
+        affiliate: affiliate ? new Affiliate(affiliate) : undefined,
     };
 };

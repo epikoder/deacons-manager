@@ -6,6 +6,7 @@ import { sourceV1 } from "../../services/orders.service/sources";
 import { usePageContext } from "vike-react/usePageContext";
 import { postgrest, WithAuth } from "../../utils/postgrest";
 import useRender from "../../hooks/useRender";
+import Badge from "../../components/Badge";
 
 export default function LayoutDefault({
   children,
@@ -40,7 +41,9 @@ export default function LayoutDefault({
       <Sidebar>
         <Logo />
         <Link href="/">Dashboard</Link>
-        <Link href="/orders">Orders</Link>
+        <Badge subscriber={OrderService.instance.notification}>
+          <Link href="/orders">Orders</Link>
+        </Badge>
         <Link href="/affiliates">Affiliates</Link>
         <Link href="/agents">Agents</Link>
         <Link href="/profile">Profile</Link>
@@ -54,11 +57,8 @@ function Sidebar({ children }: { children: React.ReactNode }) {
   return (
     <div
       id="sidebar"
+      className="p-5 flex flex-col gap-2 flex-shrink-0"
       style={{
-        padding: 20,
-        flexShrink: 0,
-        display: "flex",
-        flexDirection: "column",
         lineHeight: "1.8em",
         borderRight: "2px solid #eee",
       }}

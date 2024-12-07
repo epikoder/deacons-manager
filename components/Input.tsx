@@ -1,12 +1,19 @@
-import { ForwardedRef, forwardRef, InputHTMLAttributes, useState } from "react";
+import {
+  ForwardedRef,
+  forwardRef,
+  HTMLAttributes,
+  InputHTMLAttributes,
+  useState,
+} from "react";
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   resetSize?: boolean;
   validator?: Validator;
+  sx?: HTMLAttributes<HTMLDivElement>["className"];
 }
 
 const Input = forwardRef(
-  ({ resetSize, validator, className, ...inputProps }: InputProps, ref) => {
+  ({ resetSize, validator, className, sx, ...inputProps }: InputProps, ref) => {
     const [txt, setTxt] = useState(inputProps.defaultValue);
     const _isvalid = () => {
       if (txt == undefined) return true;
@@ -20,8 +27,14 @@ const Input = forwardRef(
     return (
       <div
         className={`rounded-md border ${
-          _isvalid() ? "border-gray-500" : "border-red-500"
-        } px-2 focus-within:border-2 text-sm ${resetSize ? "" : "w-full"}`}
+          inputProps.disabled
+            ? "border-gray-200"
+            : _isvalid()
+            ? "border-gray-500"
+            : "border-red-500"
+        } px-2 focus-within:border-2 text-sm ${resetSize ? "" : "w-full"} ${
+          sx ?? ""
+        }`}
       >
         <input
           ref={ref as ForwardedRef<HTMLInputElement>}

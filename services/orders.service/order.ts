@@ -125,11 +125,12 @@ export default class Order extends Observer {
     return this.deliveryStatus !== "delivered";
   }
 
-  get deliveredOn() {
-    const delivered_on = this._inner.delivered_on
+  get deliveredOn(): Carbon | undefined {
+    let delivered_on = this._inner.delivered_on
       ? new Carbon(this._inner.delivered_on)
-      : new Carbon();
+      : undefined;
     if (!this._inner.delivered_on && this.deliveryStatus == "delivered") {
+      delivered_on = new Carbon();
       this._inner.delivered_on = delivered_on.localISO();
       this.update();
     }

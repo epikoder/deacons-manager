@@ -25,10 +25,8 @@ import { Agent } from "../services/agents.service";
 import Input from "./Input";
 import OrderService from "../services/orders.service/orders.service";
 import { CopyIcon, InfoIcon, PenIcon, PhoneIcon } from "./Icons";
-import { useLoadBookDistribution } from "../hooks/useLoadBookDistribution";
 import Toast from "../utils/toast";
 import StateComponent from "./State.component";
-import { usePageContext } from "vike-react/usePageContext";
 
 const context = createContext<Order | undefined>(undefined);
 export const OrderComponent = forwardRef(({ order }: { order: Order }, ref) => {
@@ -136,7 +134,7 @@ export const OrderComponent = forwardRef(({ order }: { order: Order }, ref) => {
             <div className="text-xs">{order.date}</div>
           </div>
         </div>
-        {order.deliveryStatus === "delivered" && (
+        {order.deliveryStatus === "delivered" && order.deliveredOn && (
           <div className="px-4 py-2 space-y-2 border-t text-sm">
             <div>
               <span>Affiliate earning:</span>{" "}
