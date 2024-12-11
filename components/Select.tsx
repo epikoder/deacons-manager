@@ -131,7 +131,7 @@ export enum Subjects {
   government = "Government SSCE",
   governmentUTME = "Government UTME",
   crs = "CRS SSCE",
-  crsUTME = "CRS UTMEF",
+  crsUTME = "CRS UTME",
   civic = "Civic Education and Trade subjects",
   accounting = "Financial Accounting",
 }
