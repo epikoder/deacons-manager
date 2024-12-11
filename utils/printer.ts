@@ -17,11 +17,27 @@ const printer = (el: HTMLElement): string | void => {
 
     iframe.contentDocument!.body.innerHTML = "";
     iframe.contentDocument!.body.append(el.cloneNode(true));
+    // Copy styles from parent document
+    Array.from(document.styleSheets).forEach((styleSheet) => {
+        if (styleSheet.href) {
+            iframe.contentWindow!.document.write(
+                '<link rel="stylesheet" href="' + styleSheet.href + '">',
+            );
+        } else {
+            // If the stylesheet is inline, copy the rules
+            var style = document.createElement("style");
+            Array.from(styleSheet.cssRules).forEach((rule) => {
+                style.appendChild(document.createTextNode(rule.cssText));
+            });
+            iframe.contentWindow!.document.head.appendChild(style);
+        }
+    });
 
     setTimeout(async () => {
         iframe.contentWindow?.print();
         document.removeChild(iframe);
     }, 1000);
+
 };
 
 export default printer;
