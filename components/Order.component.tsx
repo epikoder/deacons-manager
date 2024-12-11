@@ -379,6 +379,11 @@ const __UpdateDeliveryStatus = forwardRef(
           throw new Error();
         }
 
+        if (status == "delivered" && Object.keys(books).length == 0) {
+          Toast.error(`No book selected`);
+          throw new Error();
+        }
+        
         if (books) {
           await order!.setBookConfiguration(books);
         }
