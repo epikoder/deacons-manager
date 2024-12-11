@@ -106,13 +106,24 @@ export const MultiSelect = forwardRef(
 );
 
 export enum Subjects {
-  mathematics = "Mathematics",
-  english = "English",
-  physics = "Physics",
-  commerce = "Commerce",
-  biology = "Biology",
   furhterMaths = "Further Mathematics",
+  mathematics = "Mathematics",
+
+  english = "English",
+  literature = "Literature",
+
+  physics = "Physics",
+  chemistry = "Chemistry",
+  biology = "Biology",
+  agriculture = "Agriculture",
   geography = "Geography",
+
+  commerce = "Commerce",
+  economics = "Economics",
+  government = "Government",
+  crs = "CRS",
+  civic = "Civic Education and Trade subjects",
+  accounting = "Financial Accounting",
 }
 
 export const SubjectSelect = forwardRef(
