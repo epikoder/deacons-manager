@@ -441,9 +441,9 @@ export const SelectAgent = forwardRef(
           toString={(v: Agent) => `${v.name} - ${v.state}`}
           // selected={controller.value}
           render={(v: Agent) => (
-            <span className="cursor-pointer">
+            <div className="cursor-pointer py-2 px-1 rounded-md hover:bg-zinc-100">
               {`${v.name} - ${v.state}`}
-            </span>
+            </div>
           )}
           placeholder="Search agent"
         />
