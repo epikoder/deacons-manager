@@ -49,7 +49,11 @@ export default function () {
       range[1] += LIMIT;
     } while (true);
     setLoading(false);
-    setOrders(result.map((o) => new Order(o)));
+    setOrders(
+      result.map((o) => new Order(o)).sort((a, b) =>
+        b.deliveredOn!.getTime() - a.deliveredOn!.getTime()
+      ),
+    );
   };
 
   useEffect(() => {
@@ -92,11 +96,11 @@ export default function () {
           className="rounded-md px-5 py-1 text-white bg-green-500 text-sm"
           onClick={() => {
             let el = document.createElement("div");
-            const ti=titleRef.current!.cloneNode(true);
-            (ti as HTMLElement).style.marginBottom = '30px'
+            const ti = titleRef.current!.cloneNode(true);
+            (ti as HTMLElement).style.marginBottom = "30px";
             el.append(ti);
             el.append(tableRef.current!.cloneNode(true));
-            console.log(el)
+            console.log(el);
             printer(el.cloneNode(true) as HTMLElement);
           }}
         >

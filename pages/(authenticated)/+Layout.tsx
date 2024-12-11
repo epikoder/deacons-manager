@@ -1,12 +1,11 @@
-import React, { Fragment, useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { Link } from "../../components/Link";
 import logoUrl from "../../assets/logo.png";
 import OrderService from "../../services/orders.service/orders.service";
 import { sourceV1 } from "../../services/orders.service/sources";
 import { usePageContext } from "vike-react/usePageContext";
-import { postgrest, WithAuth } from "../../utils/postgrest";
-import useRender from "../../hooks/useRender";
 import Badge from "../../components/Badge";
+import Carbon from "../../utils/carbon";
 
 export default function LayoutDefault({
   children,
@@ -22,14 +21,17 @@ export default function LayoutDefault({
     orderService.registerSource(
       "Prep50Book",
       sourceV1("https://prep50book.prep50mobileapp.com.ng/api.php"),
+      new Carbon(2024, 11, 1),
     );
     orderService.registerSource(
       "Prep50BookList",
       sourceV1("https://prep50booklist.prep50mobileapp.com.ng//api.php"),
+      new Carbon(2024, 11, 1),
     );
     orderService.registerSource(
       "Nkemobi",
       sourceV1("https://nkemobi.prep50mobileapp.com.ng/api.php"),
+      new Carbon(2024, 11, 1),
     );
     orderService.init().then((service) => {
       service.start();
@@ -84,6 +86,7 @@ function Content({ children }: { children: React.ReactNode }) {
 function Logo() {
   return (
     <div
+      className="mx-auto w-fit"
       style={{
         marginTop: 20,
         marginBottom: 10,

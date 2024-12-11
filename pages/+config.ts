@@ -6,7 +6,7 @@ import type { Config } from "vike/types";
 
 export default {
   // https://vike.dev/head-tags
-  description: "Demo showcasing Vike",
+  description: "Deacon's Publishers | Dashboard",
   extends: vikeReact,
   meta: {
     bookCost: {

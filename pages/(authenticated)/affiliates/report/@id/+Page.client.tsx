@@ -49,7 +49,11 @@ export default function () {
       range[1] += LIMIT;
     } while (true);
     setLoading(false);
-    setOrders(result.map((o) => new Order(o)));
+    setOrders(
+      result.map((o) => new Order(o)).sort((a, b) =>
+        b.deliveredOn!.getTime() - a.deliveredOn!.getTime()
+      ),
+    );
   };
 
   useEffect(() => {
