@@ -175,8 +175,14 @@ export default class OrderService extends SubscriberProvider<Order[]> {
 
   public registerSource(name: string, source: OrderSource, date?: Carbon) {
     this._sources.set(name, source);
-    this._lastRefreshTimeStamp[sourceAsID(name)] = date ??
-      new Carbon("2024-01-01"); // TODO: set to Dec - 1
+    date = date ?? new Carbon("2024-01-01");
+    this._lastRefreshTimeStamp[sourceAsID(name)] = date;
+
+    /// remove orders before registered date
+    new WithAuth(
+      postgrest.from("orders").delete().lt("created_at", date.formatLocalISO())
+        .eq("source", name),
+    ).unwrap();
     this.notifySubscribers(this.orders);
   }
 
