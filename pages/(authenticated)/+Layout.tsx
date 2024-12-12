@@ -1,11 +1,11 @@
 import React, { useEffect } from "react";
 import { Link } from "../../components/Link";
-import logoUrl from "../../assets/logo.png";
 import OrderService from "../../services/orders.service/orders.service";
 import { sourceV1 } from "../../services/orders.service/sources";
 import { usePageContext } from "vike-react/usePageContext";
 import Badge from "../../components/Badge";
 import Carbon from "../../utils/carbon";
+import Logo from "../../components/Logo";
 
 export default function LayoutDefault({
   children,
@@ -48,7 +48,7 @@ export default function LayoutDefault({
         </Badge>
         <Link href="/affiliates">Affiliates</Link>
         <Link href="/agents">Agents</Link>
-        <Link href="/profile">Profile</Link>
+        <Link href="/settings">Settings</Link>
       </Sidebar>
       <Content>{context.config.bookCost && children}</Content>
     </div>
@@ -79,22 +79,6 @@ function Content({ children }: { children: React.ReactNode }) {
       >
         {children}
       </div>
-    </div>
-  );
-}
-
-function Logo() {
-  return (
-    <div
-      className="mx-auto w-fit"
-      style={{
-        marginTop: 20,
-        marginBottom: 10,
-      }}
-    >
-      <a href="/">
-        <img src={logoUrl} height={64} width={64} alt="logo" />
-      </a>
     </div>
   );
 }

@@ -71,7 +71,7 @@ export default function () {
         <Expanded>
           <div className="font-semibold text-center">Agents & Books</div>
           {books.map((bc) => (
-            <div key={bc.id} className="flex flex-wrap gap-4">
+            <div key={bc.id} className="flex flex-wrap gap-4 py-2 border-y-4">
               <span className="font-semibold underline">
                 {bc.name}
               </span>
@@ -80,6 +80,10 @@ export default function () {
                   count > 0
                 )
                 .sort(([a], [b]) => a.charCodeAt(0) - b.charCodeAt(0))
+                .sort(([a], [b]) =>
+                  (a.includes("SSCE") ? 1 : a.includes("UTME") ? 2 : 0) -
+                  (b.includes("SSCE") ? 1 : b.includes("UTME") ? 2 : 0)
+                )
                 .map(([name, count]) => (
                   <div key={name} className="text-sm">
                     {name} : {count ?? 0}

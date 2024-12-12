@@ -242,27 +242,33 @@ export const SubjectSelect = forwardRef(
             <div>Book Count</div>
           </div>
 
-          {Object.entries(state).map(([name, count], index) => (
-            <div key={name} className="grid grid-cols-4 gap-2">
-              <div className="col-span-3">{name}</div>
-              <Input
-                type="number"
-                defaultValue={count}
-                placeholder="min of 1"
-                resetSize
-                onBlur={(ev) => {
-                  if (
-                    isNaN(parseInt(ev.currentTarget.value)) ||
-                    parseInt(ev.currentTarget.value) < 1
-                  ) {
-                    ev.currentTarget.value = "0";
-                  }
-                  state[name] = parseInt(ev.currentTarget.value);
-                  setState({ ...state });
-                }}
-              />
-            </div>
-          ))}
+          {Object.entries(state).sort(([a], [b]) =>
+            a.charCodeAt(0) - b.charCodeAt(0)
+          )
+            .sort(([a], [b]) =>
+              (a.includes("SSCE") ? 1 : a.includes("UTME") ? 2 : 0) -
+              (b.includes("SSCE") ? 1 : b.includes("UTME") ? 2 : 0)
+            ).map(([name, count], index) => (
+              <div key={name} className="grid grid-cols-4 gap-2">
+                <div className="col-span-3">{name}</div>
+                <Input
+                  type="number"
+                  defaultValue={count}
+                  placeholder="min of 1"
+                  resetSize
+                  onBlur={(ev) => {
+                    if (
+                      isNaN(parseInt(ev.currentTarget.value)) ||
+                      parseInt(ev.currentTarget.value) < 1
+                    ) {
+                      ev.currentTarget.value = "0";
+                    }
+                    state[name] = parseInt(ev.currentTarget.value);
+                    setState({ ...state });
+                  }}
+                />
+              </div>
+            ))}
         </div>
       </div>
     );

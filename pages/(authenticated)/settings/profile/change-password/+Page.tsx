@@ -1,8 +1,8 @@
 import { ChangeEvent, useRef, useState } from "react";
-import Input from "../../../../components/Input";
+import Input from "../../../../../components/Input";
 import { usePageContext } from "vike-react/usePageContext";
-import { postgrest } from "../../../../utils/postgrest";
-import Button from "../../../../components/Button";
+import { postgrest } from "../../../../../utils/postgrest";
+import Button from "../../../../../components/Button";
 
 export default function () {
     const [form, setFormState] = useState({
@@ -18,11 +18,7 @@ export default function () {
         const isValid = ref.current?.checkValidity();
         if (!isValid) return;
 
-        const { data, error } = await postgrest.rpc("login", form);
-        if (error) {
-            setMessage("invalid username or password");
-            return;
-        }
+       
     };
 
     const _setFormState = (ev: ChangeEvent<HTMLInputElement>) =>

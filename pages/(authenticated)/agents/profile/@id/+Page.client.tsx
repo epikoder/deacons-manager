@@ -148,6 +148,10 @@ export default function () {
           {Object.entries(agent.books)
             .filter(([_, count]) => count > 0)
             .sort(([a], [b]) => a.charCodeAt(0) - b.charCodeAt(0))
+            .sort(([a], [b]) =>
+              (a.includes("SSCE") ? 1 : a.includes("UTME") ? 2 : 0) -
+              (b.includes("SSCE") ? 1 : b.includes("UTME") ? 2 : 0)
+            )
             .map(([name, count]) => (
               <div key={name} className="text-sm">
                 {name} : {count}
