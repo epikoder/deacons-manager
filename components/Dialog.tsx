@@ -37,7 +37,7 @@ export const showAlertDialog = ({
       {({ closeFn }) => (
         <Fragment>
           <div className={"px-4 py-2 font-semibold"}>{title}</div>
-          <div className={"px-4 py-2 text-sm"}>{message}</div>
+          <div className={"px-4 py-2 text-sm overflow-y-scroll h-full max-h-[80vh]"}>{message}</div>
           <div className={"grid grid-cols-2 text-sm"}>
             <button
               className={
