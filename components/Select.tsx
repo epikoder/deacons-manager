@@ -177,7 +177,46 @@ export const SubjectSelect = forwardRef(
     return (
       <div className="flex flex-col gap-2">
         <div className={"flex flex-wrap gap-3"}>
-          {items.map((v) => (
+          <p className="w-full font-semibold">
+            General subjects
+          </p>
+          {items.filter((v) => !v.includes("UTME") && !v.includes("SSCE")).map((
+            v,
+          ) => (
+            <div
+              key={v}
+              className={`w-fit px-2 py-px rounded-full text-xs cursor-pointer hover:bg-zinc-300 aria-disabled:bg-zinc-600 aria-disabled:hover:bg-zinc-600 aria-disabled:text-white aria-disabled:cursor-not-allowed ${
+                _isSelected(v)
+                  ? "border border-green-500"
+                  : "border border-gray-400"
+              }`}
+              id={v}
+              onClick={() => onTap(v)}
+            >
+              <div>{v}</div>
+            </div>
+          ))}
+          <p className="w-full font-semibold">
+            SSCE
+          </p>
+          {items.filter((v) => v.includes("SSCE")).map((v) => (
+            <div
+              key={v}
+              className={`w-fit px-2 py-px rounded-full text-xs cursor-pointer hover:bg-zinc-300 aria-disabled:bg-zinc-600 aria-disabled:hover:bg-zinc-600 aria-disabled:text-white aria-disabled:cursor-not-allowed ${
+                _isSelected(v)
+                  ? "border border-green-500"
+                  : "border border-gray-400"
+              }`}
+              id={v}
+              onClick={() => onTap(v)}
+            >
+              <div>{v}</div>
+            </div>
+          ))}
+          <p className="w-full font-semibold">
+            UTME
+          </p>
+          {items.filter((v) => v.includes("UTME")).map((v) => (
             <div
               key={v}
               className={`w-fit px-2 py-px rounded-full text-xs cursor-pointer hover:bg-zinc-300 aria-disabled:bg-zinc-600 aria-disabled:hover:bg-zinc-600 aria-disabled:text-white aria-disabled:cursor-not-allowed ${
