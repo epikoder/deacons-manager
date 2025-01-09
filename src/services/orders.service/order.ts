@@ -1,4 +1,4 @@
-import { Observer } from "../../@types/observable";
+import { Observer } from "../../../@types/observable";
 import Carbon from "../../utils/carbon";
 import { postgrest, WithAuth } from "../../utils/postgrest";
 import AgentService, { Agent } from "../agents.service";

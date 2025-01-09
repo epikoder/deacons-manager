@@ -1,6 +1,6 @@
 import { onRenderClient } from "vike-react/__internal/integration/onRenderClient";
 import { PageContextClient } from "vike/types";
-import { guardClient } from "../utils/guard";
+import { guardClient } from "../src/utils/guard";
 import "../assets/css/index.css";
 import "../assets/css/toast.css";
 import './impl';

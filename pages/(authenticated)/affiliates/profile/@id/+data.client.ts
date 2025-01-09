@@ -1,6 +1,6 @@
 import { PageContextServer } from "vike/types";
-import { postgrest, WithAuth } from "../../../../../utils/postgrest";
-import { Affiliate } from "../../../../../services/affiliate.service";
+import { postgrest, WithAuth } from "../../../../../src/utils/postgrest";
+import { Affiliate } from "../../../../../src/services/affiliate.service";
 
 export const data = async (pageContext: PageContextServer) => {
     const { data } = await new WithAuth(

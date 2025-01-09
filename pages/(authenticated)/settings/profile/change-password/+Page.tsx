@@ -1,8 +1,8 @@
 import { ChangeEvent, useRef, useState } from "react";
-import Input from "../../../../../components/Input";
+import Input from "../../../../../src/components/Input";
 import { usePageContext } from "vike-react/usePageContext";
-import { postgrest } from "../../../../../utils/postgrest";
-import Button from "../../../../../components/Button";
+import { postgrest } from "../../../../../src/utils/postgrest";
+import Button from "../../../../../src/components/Button";
 
 export default function () {
     const [form, setFormState] = useState({

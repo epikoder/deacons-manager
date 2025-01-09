@@ -18,7 +18,7 @@ import {
   Subjects,
   SubjectSelect,
 } from "./Select";
-import { useObserver } from "../@types/observable";
+import { useObserver } from "../../@types/observable";
 
 import { Agent } from "../services/agents.service";
 

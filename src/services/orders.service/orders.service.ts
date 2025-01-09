@@ -1,4 +1,4 @@
-import { SubscriberProvider } from "../../@types/subscribers";
+import { SubscriberProvider } from "../../../@types/subscribers";
 import Bucket from "../../utils/bucket";
 import Carbon from "../../utils/carbon";
 import { postgrest, WithAuth } from "../../utils/postgrest";
@@ -27,7 +27,7 @@ class OrderServiceNotification extends SubscriberProvider {
 
 export default class OrderService extends SubscriberProvider<Order[]> {
   private _fetchInterval: number = 60000; // sec
-  private _sources: Map<string, OrderSource> = new Map();
+  private _sources: Map<string, [string, OrderSource]> = new Map();
   private _orders: Bucket<Order> = new Bucket<Order>((order: Order) =>
     order.getUniqueID
   );
@@ -47,6 +47,10 @@ export default class OrderService extends SubscriberProvider<Order[]> {
 
   get sourceList(): string[] {
     return [...this._sources.keys()];
+  }
+  
+  get sources(): [string, string][] {
+    return [...this._sources.entries()].map(([name, [uri, _]]) => [name, uri]);
   }
 
   get orders() {
@@ -112,7 +116,7 @@ export default class OrderService extends SubscriberProvider<Order[]> {
   }
 
   public stopBackgroundPull() {
-    clearTimeout(this._timeout);
+    this._timeout && clearTimeout(this._timeout);
   }
 
   private async backgroundRefresh() {
@@ -149,13 +153,19 @@ export default class OrderService extends SubscriberProvider<Order[]> {
   private async fetchOrderFromSource() {
     const arr = [...this._sources.entries()];
     let promises: AwaitedOrderWithSource[] = [];
-    for (const [source, fn] of arr) {
+    for (const [source, [_, fn]] of arr) {
       promises = promises.concat(
         (async (param: SearchParam) => {
-          return (await fn(param)).map((order) => ({
-            ...order,
-            source: source,
-          }));
+          try {
+            let result = await fn(param);
+            return result.map((order) => ({
+              ...order,
+              source: source,
+            }));
+          } catch (error) {
+            console.error(error);
+            return [];
+          }
         })(this.sourceSearchParam(source)),
       );
     }
@@ -173,8 +183,13 @@ export default class OrderService extends SubscriberProvider<Order[]> {
     this.updateLastTimeStamp();
   }
 
-  public registerSource(name: string, source: OrderSource, date?: Carbon) {
-    this._sources.set(name, source);
+  public registerSource(
+    name: string,
+    source: OrderSource,
+    uri: string,
+    date?: Carbon,
+  ) {
+    this._sources.set(name, [uri, source]);
     date = date ?? new Carbon("2024-01-01");
     this._lastRefreshTimeStamp[sourceAsID(name)] = date;
 

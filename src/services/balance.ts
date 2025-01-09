@@ -1,4 +1,4 @@
-import { Observer } from "../@types/observable";
+import { Observer } from "../../@types/observable";
 import Carbon from "../utils/carbon";
 import { postgrest, WithAuth } from "../utils/postgrest";
 
@@ -37,10 +37,9 @@ export default class Balance extends Observer {
         month: new Carbon().getMonth() + 1,
         year: year,
         agent: this._filter.id ? this._filter.id : null,
-        source_filter:
-          (this._filter.source_filter?.length ?? 0) > 0
-            ? this._filter.source_filter
-            : null,
+        source_filter: (this._filter.source_filter?.length ?? 0) > 0
+          ? this._filter.source_filter
+          : null,
       }),
     )
       .unwrap()
@@ -56,10 +55,9 @@ export default class Balance extends Observer {
       postgrest.rpc("get_earning_by_month", {
         year: year,
         agent: this._filter.id ? this._filter.id : null,
-        source_filter:
-          (this._filter.source_filter?.length ?? 0) > 0
-            ? this._filter.source_filter
-            : null,
+        source_filter: (this._filter.source_filter?.length ?? 0) > 0
+          ? this._filter.source_filter
+          : null,
       }),
     )
       .unwrap()

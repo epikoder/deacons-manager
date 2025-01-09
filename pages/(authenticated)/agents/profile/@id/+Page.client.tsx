@@ -1,24 +1,24 @@
 import { useData } from "vike-react/useData";
-import { Agent } from "../../../../../services/agents.service";
+import { Agent } from "../../../../../src/services/agents.service";
 import { useObserver } from "../../../../../@types/observable";
 import {
   ChevronDown,
   ChevronUp,
   CopyIcon,
   PhoneIcon,
-} from "../../../../../components/Icons";
+} from "../../../../../src/components/Icons";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { Bar } from "react-chartjs-2";
 import "chart.js/auto";
 import { ArcElement, Chart, registerables } from "chart.js";
-import { postgrest, WithAuth } from "../../../../../utils/postgrest";
-import Carbon, { Month } from "../../../../../utils/carbon";
-import { SelectMonth, SubjectSelect } from "../../../../../components/Select";
-import Button from "../../../../../components/Button";
-import { showAlertDialog } from "../../../../../components/Dialog";
-import DropDown from "../../../../../components/Dropdown";
-import { useOrders } from "../../../../../services/orders.service/hook";
-import { OrderComponent } from "../../../../../components/Order.component";
+import { postgrest, WithAuth } from "../../../../../src/utils/postgrest";
+import Carbon, { Month } from "../../../../../src/utils/carbon";
+import { SelectMonth, SubjectSelect } from "../../../../../src/components/Select";
+import Button from "../../../../../src/components/Button";
+import { showAlertDialog } from "../../../../../src/components/Dialog";
+import DropDown from "../../../../../src/components/Dropdown";
+import { useOrders } from "../../../../../src/services/orders.service/hook";
+import { OrderComponent } from "../../../../../src/components/Order.component";
 
 export default function () {
   const { agent } = useData<{ agent?: Agent }>();

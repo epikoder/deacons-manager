@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from "react";
-import { SubscriberProvider } from "../@types/subscribers";
+import { SubscriberProvider } from "../../@types/subscribers";
 
 export default function Badge<T>(
     { children, subscriber }: {

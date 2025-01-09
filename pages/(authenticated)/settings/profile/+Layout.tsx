@@ -1,5 +1,5 @@
 import { Fragment, ReactNode } from "react";
-import { Link } from "../../../../components/Link";
+import { Link } from "../../../../src/components/Link";
 
 export default function ({ children }: { children: ReactNode }) {
     return (

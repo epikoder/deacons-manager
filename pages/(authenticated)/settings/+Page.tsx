@@ -1,6 +1,6 @@
 import { usePageContext } from "vike-react/usePageContext";
-import Input from "../../../components/Input";
-import Logo from "../../../components/Logo";
+import Input from "../../../src/components/Input";
+import Logo from "../../../src/components/Logo";
 
 export default function () {
     const context = usePageContext();

@@ -1,4 +1,4 @@
-import { useObserver } from "../@types/observable";
+import { useObserver } from "../../@types/observable";
 import { Affiliate } from "../services/affiliate.service";
 import Carbon from "../utils/carbon";
 import { CopyIcon, PhoneIcon } from "./Icons";

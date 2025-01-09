@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { SubscriberProvider } from "../@types/subscribers";
-import { Observer } from "../@types/observable";
+import { SubscriberProvider } from "../../@types/subscribers";
+import { Observer } from "../../@types/observable";
 import { postgrest, WithAuth } from "../utils/postgrest";
 import Carbon from "../utils/carbon";
 import Balance from "./balance";

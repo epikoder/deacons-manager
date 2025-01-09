@@ -1,10 +1,10 @@
 import { useData } from "vike-react/useData";
-import Order from "../../../../../services/orders.service/order";
-import { OrderComponent } from "../../../../../components/Order.component";
-import { Agent } from "../../../../../services/agents.service";
+import Order from "../../../../../src/services/orders.service/order";
+import { OrderComponent } from "../../../../../src/components/Order.component";
+import { Agent } from "../../../../../src/services/agents.service";
 import { useObserver } from "../../../../../@types/observable";
-import Carbon from "../../../../../utils/carbon";
-import Pagination from "../../../../../components/Pagination";
+import Carbon from "../../../../../src/utils/carbon";
+import Pagination from "../../../../../src/components/Pagination";
 import List from "rc-virtual-list";
 import { useState } from "react";
 

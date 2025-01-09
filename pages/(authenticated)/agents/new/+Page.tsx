@@ -1,11 +1,11 @@
 import { ChangeEvent, FormEvent, useRef, useState } from "react";
-import Input from "../../../../components/Input";
-import StateComponent from "../../../../components/State.component";
-import { emailValidator } from "../../../../utils/validators";
-import Button from "../../../../components/Button";
-import { postgrest, WithAuth } from "../../../../utils/postgrest";
-import { PG_DUPLICATE } from "../../../../utils/constants";
-import AgentService from "../../../../services/agents.service";
+import Input from "../../../../src/components/Input";
+import StateComponent from "../../../../src/components/State.component";
+import { emailValidator } from "../../../../src/utils/validators";
+import Button from "../../../../src/components/Button";
+import { postgrest, WithAuth } from "../../../../src/utils/postgrest";
+import { PG_DUPLICATE } from "../../../../src/utils/constants";
+import AgentService from "../../../../src/services/agents.service";
 import { navigate } from "vike/client/router";
 
 export default function () {

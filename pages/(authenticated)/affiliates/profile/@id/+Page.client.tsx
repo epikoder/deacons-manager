@@ -1,14 +1,14 @@
 import { useData } from "vike-react/useData";
 import { useObserver } from "../../../../../@types/observable";
-import { CopyIcon, PhoneIcon } from "../../../../../components/Icons";
+import { CopyIcon, PhoneIcon } from "../../../../../src/components/Icons";
 import { useEffect, useRef, useState } from "react";
 import { Bar } from "react-chartjs-2";
 import "chart.js/auto";
 import { ArcElement, Chart, registerables } from "chart.js";
-import { postgrest, WithAuth } from "../../../../../utils/postgrest";
-import Carbon, { Month } from "../../../../../utils/carbon";
-import { Affiliate } from "../../../../../services/affiliate.service";
-import { SelectMonth } from "../../../../../components/Select";
+import { postgrest, WithAuth } from "../../../../../src/utils/postgrest";
+import Carbon, { Month } from "../../../../../src/utils/carbon";
+import { Affiliate } from "../../../../../src/services/affiliate.service";
+import { SelectMonth } from "../../../../../src/components/Select";
 
 export default function () {
   const { affiliate } = useData<{ affiliate?: Affiliate }>();

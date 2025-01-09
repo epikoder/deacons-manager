@@ -1,12 +1,12 @@
 import { useRef, useState } from "react";
-import AffiliateComponent from "../../../components/Affiliate.component";
+import AffiliateComponent from "../../../src/components/Affiliate.component";
 import AffiliateService, {
   useAffiliates,
-} from "../../../services/affiliate.service";
-import Input from "../../../components/Input";
+} from "../../../src/services/affiliate.service";
+import Input from "../../../src/components/Input";
 import { navigate } from "vike/client/router";
-import Button from "../../../components/Button";
-import Pagination from "../../../components/Pagination";
+import Button from "../../../src/components/Button";
+import Pagination from "../../../src/components/Pagination";
 
 export default function () {
   const [page, setPage] = useState(1);

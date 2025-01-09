@@ -1,9 +1,9 @@
 import { ChangeEvent, useRef, useState } from "react";
-import Input from "../../components/Input";
-import Button from "../../components/Button";
-import { postgrest } from "../../utils/postgrest";
+import Input from "../../src/components/Input";
+import Button from "../../src/components/Button";
+import { postgrest } from "../../src/utils/postgrest";
 import { usePageContext } from "vike-react/usePageContext";
-import { saveAuth } from "../../utils/auth";
+import { saveAuth } from "../../src/utils/auth";
 import { navigate } from "vike/client/router";
 
 export default function () {

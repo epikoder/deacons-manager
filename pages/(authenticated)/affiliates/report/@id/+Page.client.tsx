@@ -1,11 +1,11 @@
 import { useData } from "vike-react/useData";
 import { useObserver } from "../../../../../@types/observable";
 import { useEffect, useRef, useState } from "react";
-import { postgrest, WithAuth } from "../../../../../utils/postgrest";
-import Carbon from "../../../../../utils/carbon";
-import Order from "../../../../../services/orders.service/order";
-import printer from "../../../../../utils/printer";
-import { Affiliate } from "../../../../../services/affiliate.service";
+import { postgrest, WithAuth } from "../../../../../src/utils/postgrest";
+import Carbon from "../../../../../src/utils/carbon";
+import Order from "../../../../../src/services/orders.service/order";
+import printer from "../../../../../src/utils/printer";
+import { Affiliate } from "../../../../../src/services/affiliate.service";
 
 export default function () {
   const { affiliate } = useData<{ affiliate?: Affiliate }>();

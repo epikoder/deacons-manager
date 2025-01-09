@@ -1,6 +1,6 @@
 import { PageContextClient } from "vike/types";
-import { postgrest, WithAuth } from "../../../../../utils/postgrest";
-import { Agent } from "../../../../../services/agents.service";
+import { postgrest, WithAuth } from "../../../../../src/utils/postgrest";
+import { Agent } from "../../../../../src/services/agents.service";
 
 export const data = async (pageContext: PageContextClient) => {
     const { data: agent } = await new WithAuth(

@@ -6,8 +6,8 @@ import {
   PostgrestFilterBuilder,
   PostgrestSingleResponse,
 } from "@supabase/postgrest-js";
-import { GenericSchema } from "../node_modules/@supabase/postgrest-js/src/types";
-import { POSTGRES_URI } from "../pages/credentials.shared";
+import { GenericSchema } from "../../node_modules/@supabase/postgrest-js/src/types";
+import { POSTGRES_URI } from "../../pages/credentials.shared";
 import { AUTH_KEY, saveAuthToken } from "./auth";
 import { navigate } from "vike/client/router";
 import { PG_UNAUTHORIZED } from "./constants";

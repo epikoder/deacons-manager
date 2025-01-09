@@ -1,5 +1,5 @@
 import { Fragment } from "react/jsx-runtime";
-import { useObserver } from "../@types/observable";
+import { useObserver } from "../../@types/observable";
 import { Agent } from "../services/agents.service";
 import DropDown from "./Dropdown";
 import {

@@ -1,9 +1,9 @@
 import { formatQuery } from "../../utils/helper";
 import { OrderItem } from "./order";
 
-export { sourceUsingJamb_Waec as sourceV1 };
+export { sourceUsingJambWaec };
 
-const sourceUsingJamb_Waec = (url: string): OrderSource => {
+const sourceUsingJambWaec = (url: string): OrderSource => {
     const generateItemAndAmount = (
         v: { jamb_waec: string },
     ): Pick<IOrder, "item" | "order_amount"> => {
@@ -41,35 +41,30 @@ const sourceUsingJamb_Waec = (url: string): OrderSource => {
     };
 
     return async (param: SearchParam) => {
-        try {
-            let results: Omit<IOrder, "source">[] = [];
-            let isNotEndOfList = false;
-            let page = 0;
-            do {
-                const rs = await fetch(formatQuery(url, param));
-                const orders = await rs.json();
-                if (rs.status != 200) {
-                    return [];
-                }
-                const _data = (orders as any[]).map((v) => ({
-                    id: v.id,
-                    address: v.address,
-                    created_at: v.created_at,
-                    email: v.email,
-                    fullname: v.fullname,
-                    phone: v.phone,
-                    state: v.state.includes("cross") ? "Cross River" : v.state,
-                    ...generateItemAndAmount(v),
-                } satisfies Awaited<ReturnType<OrderSource>>[number]));
-                results = results.concat(_data);
-                isNotEndOfList = param.limit <= _data.length;
-                page++;
-                param.offset = page * param.limit;
-            } while (isNotEndOfList);
-            return results;
-        } catch (e) {
-            console.error(e);
-            return [];
-        }
+        let results: Omit<IOrder, "source">[] = [];
+        let isNotEndOfList = false;
+        let page = 0;
+        do {
+            const rs = await fetch(formatQuery(url, param));
+            if (rs.status != 200) {
+                throw new Error(await rs.text());
+            }
+            const orders = await rs.json();
+            const _data = (orders as any[]).map((v) => ({
+                id: v.id,
+                address: v.address,
+                created_at: v.created_at,
+                email: v.email,
+                fullname: v.fullname,
+                phone: v.phone,
+                state: v.state.includes("cross") ? "Cross River" : v.state,
+                ...generateItemAndAmount(v),
+            } satisfies Awaited<ReturnType<OrderSource>>[number]));
+            results = results.concat(_data);
+            isNotEndOfList = param.limit <= _data.length;
+            page++;
+            param.offset = page * param.limit;
+        } while (isNotEndOfList);
+        return results;
     };
 };

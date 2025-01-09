@@ -1,5 +1,5 @@
 import { usePageContext } from "vike-react/usePageContext";
-import Input from "../../../../components/Input";
+import Input from "../../../../src/components/Input";
 
 export default function () {
     const context = usePageContext();

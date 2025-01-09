@@ -1,11 +1,11 @@
 import { Fragment, useRef, useState } from "react";
-import AgentService, { useAgent } from "../../../services/agents.service";
-import Button from "../../../components/Button";
+import AgentService, { useAgent } from "../../../src/services/agents.service";
+import Button from "../../../src/components/Button";
 import { navigate } from "vike/client/router";
-import { AgentComponent } from "../../../components/Agent.component";
-import Input from "../../../components/Input";
-import StateComponent from "../../../components/State.component";
-import Pagination from "../../../components/Pagination";
+import { AgentComponent } from "../../../src/components/Agent.component";
+import Input from "../../../src/components/Input";
+import StateComponent from "../../../src/components/State.component";
+import Pagination from "../../../src/components/Pagination";
 
 export default function () {
   const [page, setPage] = useState(1);

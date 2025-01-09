@@ -1,13 +1,13 @@
 import React, { useEffect } from "react";
-import { Link } from "../../components/Link";
-import OrderService from "../../services/orders.service/orders.service";
-import { sourceV1 } from "../../services/orders.service/sources";
+import { Link } from "../../src/components/Link";
+import OrderService from "../../src/services/orders.service/orders.service";
+import { sourceUsingJambWaec } from "../../src/services/orders.service/sources";
 import { usePageContext } from "vike-react/usePageContext";
-import Badge from "../../components/Badge";
-import Carbon from "../../utils/carbon";
-import Logo from "../../components/Logo";
+import Badge from "../../src/components/Badge";
+import Carbon from "../../src/utils/carbon";
+import Logo from "../../src/components/Logo";
 
-export default function LayoutDefault({
+export default function ({
   children,
 }: {
   children: React.ReactNode;
@@ -20,22 +20,31 @@ export default function LayoutDefault({
     const orderService = OrderService.instance;
     orderService.registerSource(
       "Prep50Book",
-      sourceV1("https://prep50book.prep50mobileapp.com.ng/api.php"),
+      sourceUsingJambWaec("https://prep50book.prep50mobileapp.com.ng/api.php"),
+      "https://prep50book.prep50mobileapp.com.ng",
       new Carbon(2024, 11, 1),
     );
+
     orderService.registerSource(
       "Prep50BookList",
-      sourceV1("https://prep50booklist.prep50mobileapp.com.ng//api.php"),
+      sourceUsingJambWaec(
+        "https://prep50booklist.prep50mobileapp.com.ng/api.php",
+      ),
+      "https://prep50booklist.prep50mobileapp.com.ng",
       new Carbon(2024, 11, 1),
     );
+
     orderService.registerSource(
       "Nkemobi",
-      sourceV1("https://nkemobi.prep50mobileapp.com.ng/api.php"),
+      sourceUsingJambWaec("https://nkemobi.prep50mobileapp.com.ng/api.php"),
+      "https://nkemobi.prep50mobileapp.com.ng",
       new Carbon(2024, 11, 1),
     );
     orderService.init().then((service) => {
       service.start();
     });
+
+    return () => orderService.stopBackgroundPull();
   }, []);
 
   return (

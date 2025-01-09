@@ -1,5 +1,5 @@
 import { Fragment, ReactNode } from "react";
-import { Link } from "../../../components/Link";
+import { Link } from "../../../src/components/Link";
 
 export default function ({ children }: { children: ReactNode }) {
     return (
@@ -16,6 +16,9 @@ export default function ({ children }: { children: ReactNode }) {
                     </Link>
                     <Link href="/settings/book-cost">
                         Book Cost
+                    </Link>
+                    <Link href="/settings/sources">
+                        Sources
                     </Link>
                 </div>
                 <div className="h-full w-full overflow-scroll px-4 p-0">

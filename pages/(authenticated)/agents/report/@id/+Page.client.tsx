@@ -1,11 +1,11 @@
 import { useData } from "vike-react/useData";
-import { Agent } from "../../../../../services/agents.service";
+import { Agent } from "../../../../../src/services/agents.service";
 import { useObserver } from "../../../../../@types/observable";
 import { useEffect, useRef, useState } from "react";
-import { postgrest, WithAuth } from "../../../../../utils/postgrest";
-import Carbon from "../../../../../utils/carbon";
-import Order from "../../../../../services/orders.service/order";
-import printer from "../../../../../utils/printer";
+import { postgrest, WithAuth } from "../../../../../src/utils/postgrest";
+import Carbon from "../../../../../src/utils/carbon";
+import Order from "../../../../../src/services/orders.service/order";
+import printer from "../../../../../src/utils/printer";
 
 export default function () {
   const { agent } = useData<{ agent?: Agent }>();

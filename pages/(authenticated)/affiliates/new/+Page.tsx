@@ -1,13 +1,13 @@
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
-import Input from "../../../../components/Input";
-import { emailValidator } from "../../../../utils/validators";
-import Button from "../../../../components/Button";
-import { postgrest, WithAuth } from "../../../../utils/postgrest";
-import { PG_DUPLICATE } from "../../../../utils/constants";
-import AgentService from "../../../../services/agents.service";
+import Input from "../../../../src/components/Input";
+import { emailValidator } from "../../../../src/utils/validators";
+import Button from "../../../../src/components/Button";
+import { postgrest, WithAuth } from "../../../../src/utils/postgrest";
+import { PG_DUPLICATE } from "../../../../src/utils/constants";
+import AgentService from "../../../../src/services/agents.service";
 import { navigate } from "vike/client/router";
-import { SourceSelector } from "../../../../components/Select";
-import { useOrders } from "../../../../services/orders.service/hook";
+import { SourceSelector } from "../../../../src/components/Select";
+import { useOrders } from "../../../../src/services/orders.service/hook";
 
 export default function () {
     useOrders();

@@ -1,4 +1,4 @@
-import logoUrl from "../assets/logo.png";
+import logoUrl from "../../assets/logo.png";
 
 export default function Logo({ url }: { url?: string }) {
     return (
