@@ -30,20 +30,21 @@ const guardClient = (
 
   new WithAuth(
     postgrest.from("configs").select().eq("name", "book_cost").single(),
-  ).unwrap().then(({ data, error }) => {
+  ).unwrap().then(async ({ data, error }) => {
+    let cost = data?.value ? parseInt(data?.value) : 1200;
+    isNaN(cost) && (cost = 1200);
+
     if (error) {
-      context.config.bookCost = 1200;
       new WithAuth(
         postgrest.from("configs").upsert({
           name: "book_cost",
-          value: 1200,
+          value: cost,
           type: "number",
         }),
       ).unwrap();
-      return;
     }
-    context.config.bookCost = parseInt(data.value);
-    OrderService.instance.costPerBook = context.config.bookCost;
+    context.config.bookCost = cost;
+    OrderService.instance.costPerBook = cost;
     onRenderClient(context); // Render client
   });
 };

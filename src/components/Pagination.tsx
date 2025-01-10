@@ -13,7 +13,7 @@ export interface PaginationProp {
 export default function Pagination({
   onNavigate,
   total,
-  maxNav = 6,
+  maxNav = 8,
   page = 1,
   perPage,
   skipCount = 5,

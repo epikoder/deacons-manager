@@ -11,7 +11,7 @@ export default function () {
                 Deacon's Publishers
             </p>
             <p>
-                v1.2.2
+                v1.2.3
             </p>
         </div>
     );

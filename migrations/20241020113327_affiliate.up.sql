@@ -9,3 +9,5 @@ CREATE TABLE public.affiliates(
 );
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.affiliates TO authenticated;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.affiliates TO admin;

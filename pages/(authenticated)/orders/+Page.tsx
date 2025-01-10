@@ -71,13 +71,15 @@ export default function () {
 
   useEffect(() => {
     if (!_ready) return;
+    const data = {
+      filter: [...filter.values()],
+      affiliates: [...affiliateFilter.values()],
+      categories: [...categoryFilter.values()],
+    };
+    console.log(data);
     localStorage.setItem(
       "filters",
-      JSON.stringify({
-        filter: [...filter.values()],
-        affiliates: [...affiliateFilter.values()],
-        categories: [...categoryFilter.values()],
-      }),
+      JSON.stringify(data),
     );
   }, [filter, affiliateFilter, categoryFilter]);
 
@@ -196,10 +198,6 @@ export default function () {
   };
 
   const orders = applyFilter();
-
-  useEffect(() => {
-    setAffiliateFilter(new Set(OrderService.instance.sourceList));
-  }, []);
 
   return (
     <div className="overflow-scroll h-screen flex flex-col gap-4">

@@ -86,7 +86,7 @@ export default class OrderService extends SubscriberProvider<Order[]> {
       Object.entries(data["value"]).forEach(([key, timestamp]) => {
         data["value"][key] = timestamp
           ? new Carbon(timestamp as string)
-          : new Carbon("2024-01-01");
+          : new Carbon("2024-12-01");
       });
       this._lastRefreshTimeStamp = data["value"]
         ? {
@@ -190,14 +190,14 @@ export default class OrderService extends SubscriberProvider<Order[]> {
     date?: Carbon,
   ) {
     this._sources.set(name, [uri, source]);
-    date = date ?? new Carbon("2024-01-01");
+    date = date ?? new Carbon("2024-12-01");
     this._lastRefreshTimeStamp[sourceAsID(name)] = date;
 
     /// remove orders before registered date
-    new WithAuth(
-      postgrest.from("orders").delete().lt("created_at", date.formatLocalISO())
-        .eq("source", name),
-    ).unwrap();
+    // new WithAuth(
+    //   postgrest.from("orders").delete().lt("created_at", date.formatLocalISO())
+    //     .eq("source", name),
+    // ).unwrap();
     this.notifySubscribers(this.orders);
   }
 

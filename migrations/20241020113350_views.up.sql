@@ -11,3 +11,5 @@ WHERE
     AND array_length(a.source_list, 1) > 0;
 
 GRANT SELECT ON "affiliate_orders" TO authenticated;
+
+GRANT SELECT ON "affiliate_orders" TO admin;

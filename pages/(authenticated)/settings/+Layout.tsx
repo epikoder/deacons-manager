@@ -1,7 +1,9 @@
 import { Fragment, ReactNode } from "react";
 import { Link } from "../../../src/components/Link";
+import { usePageContext } from "vike-react/usePageContext";
 
 export default function ({ children }: { children: ReactNode }) {
+    const context = usePageContext();
     return (
         <Fragment>
             <div className="p-3 border-b-2 text-sm h-12">
@@ -14,9 +16,12 @@ export default function ({ children }: { children: ReactNode }) {
                     <Link href="/settings/profile">
                         Profile
                     </Link>
-                    <Link href="/settings/book-cost">
-                        Book Cost
-                    </Link>
+                    {context.config.user!.role === "admin" &&
+                        (
+                            <Link href="/settings/book-cost">
+                                Book Cost
+                            </Link>
+                        )}
                     <Link href="/settings/sources">
                         Sources
                     </Link>

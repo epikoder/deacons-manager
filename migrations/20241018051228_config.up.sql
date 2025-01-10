@@ -7,3 +7,5 @@ CREATE TABLE public.configs(
 );
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.configs TO authenticated;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.configs TO admin;

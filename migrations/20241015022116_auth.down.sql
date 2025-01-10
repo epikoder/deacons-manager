@@ -13,6 +13,10 @@ DROP TRIGGER IF EXISTS update_user_updated_at ON auth.users;
 
 DROP FUNCTION IF EXISTS auth.update_updated_at_column;
 
+DROP FUNCTION IF EXISTS auth.create_user;
+
+DROP FUNCTION IF EXISTS auth.delete_user;
+
 DROP TYPE public.token_pair;
 
 DROP TABLE IF EXISTS auth.tokens;
@@ -26,6 +30,10 @@ REVOKE USAGE ON SCHEMA public FROM anon;
 REVOKE USAGE ON SCHEMA public FROM authenticated;
 
 DROP ROLE IF EXISTS authenticated;
+
+REVOKE USAGE ON SCHEMA public FROM "admin";
+
+DROP ROLE IF EXISTS "admin";
 
 DROP ROLE IF EXISTS anon;
 

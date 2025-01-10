@@ -11,3 +11,5 @@ CREATE TABLE public.agents(
 );
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.agents TO authenticated;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.agents TO admin;

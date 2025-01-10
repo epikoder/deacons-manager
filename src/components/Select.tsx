@@ -641,12 +641,16 @@ export const SourceSelector = forwardRef(({}, ref) => {
         const sources = data.map((v) => v.source_list).flat().unique().map(
           (v) => v.toLowerCase(),
         );
-        setSourceList(OrderService.instance.sourceList.map((v) => ({
-          getID() {
-            return v;
-          },
-          disabled: sources.includes(v.toLowerCase()),
-        })));
+        setSourceList(
+          OrderService.instance.sourceList.sort((a, b) =>
+            a.charCodeAt(0) - b.charCodeAt(0)
+          ).map((v) => ({
+            getID() {
+              return v;
+            },
+            disabled: sources.includes(v.toLowerCase()),
+          })),
+        );
       });
   }, []);
 

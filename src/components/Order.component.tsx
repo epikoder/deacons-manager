@@ -39,7 +39,7 @@ export const OrderComponent = forwardRef(({ order }: { order: Order }, ref) => {
         onClick={() => console.log(order)}
       >
         <div className="flex justify-between items-center px-3">
-          <div className="text-[10px] rounded-full px-3 py-px text-white bg-zinc-700">
+          <div className="text-xs rounded-full px-3 py-1 text-white bg-zinc-700 font-semibold">
             {order.source}
           </div>
           <div id="tags" className="flex gap-2 items-center">

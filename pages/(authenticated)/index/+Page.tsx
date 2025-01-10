@@ -152,13 +152,13 @@ const OrderMetricBySource = () => {
   const [metric, setMetric] = useState<
     ChartDataset<"line", (number | Point | null)[]>[]
   >([]);
-  const [year, setYear] = useState(2024);
+  const [year, setYear] = useState(new Date().getFullYear());
 
   useEffect(() => {
-    cummalativeOrderForAffiliateByMonth().then((data) =>
+    cummalativeOrderForAffiliateByMonth(year).then((data) =>
       setMetric(getData(data))
     );
-  }, []);
+  }, [year]);
 
   const skipped = (ctx: ScriptableLineSegmentContext, value: any) =>
     ctx.p0.skip || ctx.p1.skip ? value : undefined;
@@ -240,11 +240,11 @@ const OrderMetricByState = () => {
   const [metric, setMetric] = useState<
     ChartDataset<"line", (number | Point | null)[]>[]
   >([]);
-  const [year, setYear] = useState(2024);
+  const [year, setYear] = useState(new Date().getFullYear());
 
   useEffect(() => {
-    cummalativeOrderByState().then((data) => setMetric(getData(data)));
-  }, []);
+    cummalativeOrderByState(year).then((data) => setMetric(getData(data)));
+  }, [year]);
 
   const skipped = (ctx: ScriptableLineSegmentContext, value: any) =>
     ctx.p0.skip || ctx.p1.skip ? value : undefined;

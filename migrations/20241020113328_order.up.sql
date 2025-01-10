@@ -25,3 +25,5 @@ ALTER TABLE public.orders
     ADD CONSTRAINT unique_source_id UNIQUE (source, id);
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.orders TO authenticated;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.orders TO admin;

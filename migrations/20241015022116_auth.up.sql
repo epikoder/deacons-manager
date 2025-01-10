@@ -12,9 +12,15 @@ CREATE ROLE authenticated NOINHERIT;
 
 GRANT anon TO authenticated;
 
+CREATE ROLE "admin" INHERIT;
+
+GRANT authenticated TO "admin";
+
 GRANT USAGE ON SCHEMA public TO anon;
 
 GRANT USAGE ON SCHEMA public TO authenticated;
+
+GRANT USAGE ON SCHEMA public TO "admin";
 
 CREATE TABLE auth.users(
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -205,4 +211,49 @@ SECURITY DEFINER;
 
 GRANT EXECUTE ON FUNCTION public.refresh_token(text) TO anon;
 
-GRANT EXECUTE ON FUNCTION public.refresh_token(text) TO anon;
+GRANT EXECUTE ON FUNCTION public.refresh_token(text) TO authenticated;
+
+GRANT EXECUTE ON FUNCTION public.refresh_token(text) TO admin;
+
+-- create_user(email, password)
+CREATE FUNCTION auth.create_user(fullname text, email text, password text)
+  RETURNS uuid
+  AS $$
+DECLARE
+  new_user_id uuid;
+BEGIN
+  -- Insert user with default role "authenticated"
+  INSERT INTO auth.users(fullname, email, password, role)
+    VALUES ($1, $2, $3, 'authenticated')
+  RETURNING
+    id INTO new_user_id;
+  RETURN new_user_id;
+END;
+$$
+LANGUAGE plpgsql;
+
+-- Grant EXECUTE to users with the "admin" role
+GRANT EXECUTE ON FUNCTION auth.create_user(text, text, text) TO "admin";
+
+-- delete_user(id)
+CREATE FUNCTION auth.delete_user(user_id uuid)
+  RETURNS void
+  AS $$
+BEGIN
+  -- Update the deleted_at timestamp
+  UPDATE
+    auth.users
+  SET
+    deleted_at = now()
+  WHERE
+    id = $1;
+  -- Raise an exception if no rows were affected
+  IF NOT FOUND THEN
+    RAISE exception 'User not found';
+  END IF;
+END;
+$$
+LANGUAGE plpgsql;
+
+-- Grant EXECUTE to users with the "admin" role
+GRANT EXECUTE ON FUNCTION auth.delete_user(uuid) TO "admin";

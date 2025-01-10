@@ -47,7 +47,7 @@ export default class Carbon extends Date {
     }
 
     public static lastMonthOfYear(year?: number) {
-        return year || year == new Date().getFullYear()
+        return year == new Date().getFullYear()
             ? new Date().getMonth() + 1
             : 12;
     }

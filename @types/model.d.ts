@@ -1,6 +1,7 @@
 interface User {
   fullname: string;
   email: string;
+  role: "authenticated" | "admin";
 }
 
 type DeliveryStatus = "pending" | "delivered";
