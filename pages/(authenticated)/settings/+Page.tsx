@@ -1,5 +1,4 @@
 import { usePageContext } from "vike-react/usePageContext";
-import Input from "../../../src/components/Input";
 import Logo from "../../../src/components/Logo";
 
 export default function () {

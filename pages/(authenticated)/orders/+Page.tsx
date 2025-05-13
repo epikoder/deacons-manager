@@ -199,6 +199,17 @@ export default function () {
 
   const orders = applyFilter();
 
+  let interval: ReturnType<typeof setTimeout>;
+  const debounce = (text: string) => {
+    interval = setTimeout(async () => {
+      clearTimeout(interval);
+      const a = await OrderService.instance.fetchOrders(1, {
+        limit: 100,
+        phone: text,
+      });
+    }, 500);
+  };
+
   return (
     <div className="overflow-scroll h-screen flex flex-col gap-4">
       <div
@@ -396,6 +407,14 @@ export default function () {
             ))}
           </div>
         )}
+      </div>
+      <div className="max-w-screen-sm">
+        <Input
+          name="search"
+          placeholder="Search phone..."
+          sx="col-span-5 w-full"
+          onChange={(ev) => debounce(ev.currentTarget.value)}
+        />
       </div>
       <div className="px-4 flex flex-col gap-4">
         {!OrderService.instance.loading && (

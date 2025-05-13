@@ -48,7 +48,7 @@ export default class OrderService extends SubscriberProvider<Order[]> {
   get sourceList(): string[] {
     return [...this._sources.keys()];
   }
-  
+
   get sources(): [string, string][] {
     return [...this._sources.entries()].map(([name, [uri, _]]) => [name, uri]);
   }
@@ -212,6 +212,7 @@ export default class OrderService extends SubscriberProvider<Order[]> {
       source?: string[];
       category?: string[];
       agent_id?: string;
+      phone?: string;
     },
   ) {
     this._loading = true;
@@ -271,6 +272,10 @@ export default class OrderService extends SubscriberProvider<Order[]> {
     if (param.agent_id) {
       query.eq("agent_id", param.agent_id);
     }
+    if (param.phone) {
+      query.ilike("phone", `%${param.phone}%`);
+    }
+    
     const { data, count } = await new WithAuth(query).unwrap();
     this._totalOrders = count ?? 0;
     this._loading = false;
