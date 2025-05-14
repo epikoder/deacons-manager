@@ -201,8 +201,8 @@ export default function () {
 
   let interval: ReturnType<typeof setTimeout>;
   const debounce = (text: string) => {
+    clearTimeout(interval);
     interval = setTimeout(async () => {
-      clearTimeout(interval);
       const a = await OrderService.instance.fetchOrders(1, {
         limit: 100,
         phone: text,
