@@ -194,10 +194,10 @@ export default class OrderService extends SubscriberProvider<Order[]> {
     this._lastRefreshTimeStamp[sourceAsID(name)] = date;
 
     /// remove orders before registered date
-    // new WithAuth(
-    //   postgrest.from("orders").delete().lt("created_at", date.formatLocalISO())
-    //     .eq("source", name),
-    // ).unwrap();
+    new WithAuth(
+      postgrest.from("orders").delete().lt("created_at", date.formatLocalISO())
+        .eq("source", name),
+    ).unwrap();
     this.notifySubscribers(this.orders);
   }
 

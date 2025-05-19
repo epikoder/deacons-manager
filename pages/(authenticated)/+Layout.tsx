@@ -92,14 +92,14 @@ export default function ({
       "Nanyalove",
       sourceUsingJambWaec("https://nanyalove.com.ng/api.php"),
       "https://nanyalove.com.ng",
-      new Carbon(2024, 11, 1),
+      new Carbon(2025, 5, 1),
     );
 
     orderService.registerSource(
       "Winbest",
       sourceUsingJambWaec("https://www.winbestinternational.com.ng/api.php"),
       "https://www.winbestinternational.com.ng",
-      new Carbon(2024, 11, 1),
+      new Carbon(2025, 5, 1),
     );
     orderService.init().then((service) => {
       service.start();
