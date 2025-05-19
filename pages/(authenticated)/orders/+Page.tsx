@@ -408,7 +408,7 @@ export default function () {
           </div>
         )}
       </div>
-      <div className="max-w-screen-sm">
+      <div className="max-w-screen-sm p-4">
         <Input
           name="search"
           placeholder="Search phone..."
@@ -422,7 +422,12 @@ export default function () {
             data={orders}
             itemKey={(o) => o.ID!}
           >
-            {(order, key) => <OrderComponent order={order} />}
+            {(order, key) => (
+              <OrderComponent
+                key={`${order.getUniqueID}-${new Date().getTime()}`}
+                order={order}
+              />
+            )}
           </List>
         )}
         {OrderService.instance.loading && (

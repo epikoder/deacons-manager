@@ -201,10 +201,11 @@ export default class OrderService extends SubscriberProvider<Order[]> {
     this.notifySubscribers(this.orders);
   }
 
+  _abortController: AbortController | undefined;
   public async fetchOrders(
     page = 1,
     param = {
-      limit: 100,
+      limit: 50,
     } as Omit<SearchParam, "offset"> & {
       confirmed?: boolean;
       assigned?: boolean;
@@ -216,9 +217,14 @@ export default class OrderService extends SubscriberProvider<Order[]> {
     },
   ) {
     this._loading = true;
+    if (this._abortController) {
+      this._abortController.abort();
+    }
+    this._abortController = new AbortController();
+
     this.notifySubscribers(this.orders);
 
-    let rngEnd = param.limit ?? 100;
+    let rngEnd = 50;
     let offset = 0;
     if (page <= 1) {
       offset = 0;
@@ -275,8 +281,10 @@ export default class OrderService extends SubscriberProvider<Order[]> {
     if (param.phone) {
       query.ilike("phone", `%${param.phone}%`);
     }
-    
-    const { data, count } = await new WithAuth(query).unwrap();
+
+    const { data, count } = await new WithAuth(
+      query.abortSignal(this._abortController!.signal),
+    ).unwrap();
     this._totalOrders = count ?? 0;
     this._loading = false;
     this._orders.clear();

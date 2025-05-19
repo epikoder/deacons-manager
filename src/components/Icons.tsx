@@ -178,7 +178,7 @@ export function ActivityIndicator(
             strokeWidth={1.5}
             stroke="currentColor"
             {...props}
-            className={`${"size-5" ?? className} ${
+            className={`${className ?? "size-5"} ${
                 active ? "animate-spin" : ""
             }`}
         >
