@@ -32,6 +32,23 @@ DROP FUNCTION IF EXISTS auth.encrypt_client_secret();
 
 DROP TABLE IF EXISTS auth.apps;
 
-REVOKE app_client FROM authenticator;
+-- Revoke from whoever actually holds it, for the same reason.
+DO $$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+  SELECT
+    m.rolname
+  FROM
+    pg_auth_members am
+    JOIN pg_roles m ON m.oid = am.member
+    JOIN pg_roles g ON g.oid = am.roleid
+  WHERE
+    g.rolname = 'app_client' LOOP
+      EXECUTE format('REVOKE app_client FROM %I', r.rolname);
+    END LOOP;
+END
+$$;
 
 DROP ROLE IF EXISTS app_client;

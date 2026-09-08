@@ -46,8 +46,11 @@ for f in migrations/*.up.sql; do
   "${PSQL[@]}" < "$f"
 done
 
+# On a fresh database none of these roles exist until the migrations have run, so the
+# authenticator cannot be granted membership beforehand - which is also why the
+# app_clients migration's auto-detection warns on a first install. Grant them here.
 "${PSQL[@]}" <<'SQL'
-GRANT anon, authenticated, "admin" TO authenticator;
+GRANT anon, authenticated, "admin", app_client TO authenticator;
 -- PostgREST caches the schema at boot. Without this, any RPC added by a migration
 -- 404s with PGRST202 ("no matches were found in the schema cache") until it restarts.
 NOTIFY pgrst, 'reload schema';

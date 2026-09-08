@@ -76,7 +76,36 @@ CREATE ROLE app_client NOINHERIT;
 
 GRANT USAGE ON SCHEMA public TO app_client;
 
-GRANT app_client TO authenticator;
+-- PostgREST connects as an "authenticator" role and does SET LOCAL ROLE per request,
+-- so that role must be a member of app_client or no token can ever assume it. No
+-- migration in this repo creates that role - it is provisioned by ops and named in
+-- postgrest.conf - so do not hardcode a name here: a wrong guess aborts the whole
+-- migration with "role ... does not exist". Detect it instead as the login role that
+-- can already become anon.
+DO $$
+DECLARE
+  r record;
+  found boolean := FALSE;
+BEGIN
+  FOR r IN
+  SELECT
+    m.rolname
+  FROM
+    pg_auth_members am
+    JOIN pg_roles m ON m.oid = am.member
+    JOIN pg_roles g ON g.oid = am.roleid
+  WHERE
+    g.rolname = 'anon'
+    AND m.rolcanlogin LOOP
+      EXECUTE format('GRANT app_client TO %I', r.rolname);
+      RAISE NOTICE 'granted app_client to PostgREST connection role %', r.rolname;
+      found := TRUE;
+    END LOOP;
+  IF NOT found THEN
+    RAISE WARNING 'no PostgREST connection role found; app_client tokens will be rejected until you run: GRANT app_client TO <authenticator role>';
+  END IF;
+END
+$$;
 
 ----------------
 -- Claim helpers.
