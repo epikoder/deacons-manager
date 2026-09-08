@@ -1,0 +1,13 @@
+FROM postgres:16-bookworm
+
+# pgjwt is pure PL/pgSQL (it only needs pgcrypto), so there is nothing to compile:
+# dropping the control + SQL files into the extension dir is enough for CREATE EXTENSION.
+ARG PGJWT_REF=master
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends ca-certificates curl; \
+    ext="$(pg_config --sharedir)/extension"; \
+    curl -fsSL "https://raw.githubusercontent.com/michelp/pgjwt/${PGJWT_REF}/pgjwt.control" -o "$ext/pgjwt.control"; \
+    curl -fsSL "https://raw.githubusercontent.com/michelp/pgjwt/${PGJWT_REF}/pgjwt--0.2.0.sql" -o "$ext/pgjwt--0.2.0.sql"; \
+    apt-get purge -y --auto-remove curl; \
+    rm -rf /var/lib/apt/lists/*
