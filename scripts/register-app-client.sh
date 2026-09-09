@@ -33,7 +33,17 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-die() { echo "error: $*" >&2; exit 1; }
+REPORTED=0
+die() { echo "error: $*" >&2; REPORTED=1; exit 1; }
+
+# Random token with no pipeline, so nothing can die on SIGPIPE.
+random_token() {
+    python3 -c "import secrets,string;print(''.join(secrets.choice(string.ascii_letters+string.digits) for _ in range($1)))"
+}
+
+# set -e aborting with no explanation is what made the SIGPIPE above so hard to see.
+trap 'rc=$?; [[ $rc -ne 0 && $REPORTED -eq 0 ]] && echo "error: aborted unexpectedly with exit $rc" >&2; exit $rc' EXIT
+
 [[ -n $NAME ]]       || die "--name is required"
 [[ -n $CLIENT_ID ]]  || die "--client-id is required"
 [[ -n $NAMESPACES ]] || die "--namespaces is required"
@@ -52,10 +62,15 @@ read_env() {
 DATABASE_URL="${DATABASE_URL:-$(read_env DATABASE_URL || true)}"
 [[ -n ${DATABASE_URL:-} ]] || die "DATABASE_URL is not set and not found in $(pwd)/.env"
 command -v psql >/dev/null || die "psql not found"
+command -v python3 >/dev/null || die "python3 not found"
 
 # Alphanumeric: this ends up in a .env file and in an HTTP JSON body, and both are
 # happier without escaping.
-SECRET=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 48)
+#
+# Not `tr -dc ... </dev/urandom | head -c N`: head closes the pipe at N bytes, tr dies
+# on SIGPIPE, and under `set -o pipefail -e` that aborts the whole script silently
+# before a single line of output.
+SECRET=$(random_token 48)
 
 EXISTS=$(psql "$DATABASE_URL" -qtAX --set=cid="$CLIENT_ID" <<'SQL'
 SELECT count(*) FROM auth.apps WHERE client_id = :'cid';

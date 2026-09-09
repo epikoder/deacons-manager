@@ -20,7 +20,17 @@ for a in "$@"; do
     esac
 done
 
-die() { echo "error: $*" >&2; exit 1; }
+REPORTED=0
+die() { echo "error: $*" >&2; REPORTED=1; exit 1; }
+
+# Random token with no pipeline, so nothing can die on SIGPIPE.
+random_token() {
+    python3 -c "import secrets,string;print(''.join(secrets.choice(string.ascii_letters+string.digits) for _ in range($1)))"
+}
+
+# set -e aborting with no explanation is what made the SIGPIPE above so hard to see.
+trap 'rc=$?; [[ $rc -ne 0 && $REPORTED -eq 0 ]] && echo "error: aborted unexpectedly with exit $rc" >&2; exit $rc' EXIT
+
 
 read_env() {
     local key=$1 line
@@ -42,7 +52,9 @@ psql "$DATABASE_URL" -qtAX -c "SELECT 1 FROM pg_roles WHERE rolname='authenticat
 
 # Alphanumeric only: the password goes into a URI in postgrest.conf, and percent
 # encoding there is a reliable source of confusing failures.
-PASSWORD=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 40)
+#
+# Not `tr -dc ... </dev/urandom | head -c N` - see random_token above.
+PASSWORD=$(random_token 40)
 
 # The password is passed as a psql variable and quoted into the statement with
 # format(%L), so it is never interpolated into SQL text by the shell.
