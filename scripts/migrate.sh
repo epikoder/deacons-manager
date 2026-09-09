@@ -120,6 +120,9 @@ SELECT CASE
   ELSE 'ok   app.jwt_secret is set'
 END;
 
+-- PostgREST logs in as one role and does SET LOCAL ROLE per request, so that role
+-- needs membership in app_client. A superuser is the exception: it can SET ROLE to
+-- anything without the grant, so flag it rather than calling it a failure.
 SELECT CASE
   WHEN NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_client')
     THEN 'FAIL app_client role missing - did the app_clients migration run?'
@@ -128,12 +131,43 @@ SELECT CASE
     JOIN pg_roles m ON m.oid = am.member
     JOIN pg_roles g ON g.oid = am.roleid
     WHERE g.rolname = 'app_client' AND m.rolcanlogin)
-    THEN 'ok   a login role can assume app_client'
-  ELSE 'FAIL no login role can assume app_client - run: GRANT app_client TO <authenticator role>'
+    THEN 'ok   ' || (
+      SELECT string_agg(m.rolname, ', ' ORDER BY m.rolname)
+      FROM pg_auth_members am
+      JOIN pg_roles m ON m.oid = am.member
+      JOIN pg_roles g ON g.oid = am.roleid
+      WHERE g.rolname = 'app_client' AND m.rolcanlogin) || ' can assume app_client'
+  ELSE 'FAIL no login role can assume app_client - pick the role PostgREST connects as (db-uri in postgrest.conf):'
 END;
 
-SELECT 'ok   registered app clients: ' || count(*) FROM auth.apps WHERE disabled_at IS NULL;
-SELECT 'ok   namespaces mapped: ' || count(*) FROM auth.app_namespaces;
+-- Only returns rows when nothing holds the grant, so it stays quiet once fixed.
+SELECT '       GRANT app_client TO ' || quote_ident(r.rolname) || ';'
+     || CASE WHEN r.rolsuper THEN '   -- superuser: already able to SET ROLE, grant not strictly needed'
+             WHEN EXISTS (
+               SELECT 1 FROM pg_auth_members am
+               JOIN pg_roles g ON g.oid = am.roleid
+               WHERE am.member = r.oid AND g.rolname = 'anon')
+             THEN '   -- likely: this is the role that can already become anon'
+             ELSE '' END
+FROM pg_roles r
+WHERE r.rolcanlogin
+  AND r.rolname NOT LIKE 'pg\_%'
+  AND NOT EXISTS (
+    SELECT 1 FROM pg_auth_members am
+    JOIN pg_roles m ON m.oid = am.member
+    JOIN pg_roles g ON g.oid = am.roleid
+    WHERE g.rolname = 'app_client' AND m.rolcanlogin)
+ORDER BY r.rolsuper, r.rolname;
+
+SELECT CASE WHEN count(*) = 0
+  THEN 'warn no app clients registered yet - nothing can obtain a token until you add one'
+  ELSE 'ok   registered app clients: ' || count(*) END
+FROM auth.apps WHERE disabled_at IS NULL;
+
+SELECT CASE WHEN count(*) = 0
+  THEN 'warn no namespaces mapped yet - see docker/check-sources.sql for the real orders.source values'
+  ELSE 'ok   namespaces mapped: ' || count(*) END
+FROM auth.app_namespaces;
 SQL
 
 # Safe to repeat, and harmless when PostgREST is not listening.
