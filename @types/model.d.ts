@@ -16,6 +16,8 @@ interface IOrder {
   email: string;
   fullname: string;
   phone: string;
+  /** Generated: the last ten digits of phone, for format-agnostic search. */
+  phone_digits?: string;
   item: any;
   order_amount: number;
   address: string;

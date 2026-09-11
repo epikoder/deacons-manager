@@ -32,23 +32,25 @@ ON CONFLICT
   DO NOTHING;
 
 -- Orders. delivered_on drives the earnings functions; created_at drives the order counts.
-INSERT INTO public.orders(id, source, fullname, item, order_amount, state, delivery_status, delivery_cost, office_charge, books, created_at, delivered_on)
+-- Phones are deliberately written in different formats. The normalize_phone trigger
+-- rewrites them to 0XXXXXXXXXX on insert, so a search for any format finds them all.
+INSERT INTO public.orders(id, source, fullname, phone, item, order_amount, state, delivery_status, delivery_cost, office_charge, books, created_at, delivered_on)
   VALUES
     -- Ella: 3 delivered this month, 1 pending
-    ('E1', 'Ella', 'Buyer One', 'jamb-science', 15000, 'Enugu', 'delivered', 2000, 1500, '{"Physics":1}', LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '2 day'), LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '3 day')),
-    ('E2', 'Ella', 'Buyer Two', 'jamb-art', 12000, 'Enugu', 'delivered', 1500, 1200, '{"Government":1}', LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '4 day'), LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '5 day')),
-    ('E3', 'ella', 'Buyer Three', 'waec-science', 18000, 'Lagos', 'delivered', 2500, 1800, '{"Biology":2}', LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '6 day'), LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '7 day')),
-    ('E4', 'Ella', 'Buyer Four', 'jamb-science', 15000, 'Abia', 'pending', 2000, 1500, '{"Chemistry":1}', LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '8 day'), NULL),
+    ('E1', 'Ella', 'Buyer One', '0803 123 4567', 'jamb-science', 15000, 'Enugu', 'delivered', 2000, 1500, '{"Physics":1}', LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '2 day'), LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '3 day')),
+    ('E2', 'Ella', 'Buyer Two', '+2348031234568', 'jamb-art', 12000, 'Enugu', 'delivered', 1500, 1200, '{"Government":1}', LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '4 day'), LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '5 day')),
+    ('E3', 'ella', 'Buyer Three', '8031234569', 'waec-science', 18000, 'Lagos', 'delivered', 2500, 1800, '{"Biology":2}', LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '6 day'), LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '7 day')),
+    ('E4', 'Ella', 'Buyer Four', '2348031234570', 'jamb-science', 15000, 'Abia', 'pending', 2000, 1500, '{"Chemistry":1}', LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '8 day'), NULL),
     -- Emeka: 2 delivered this month, deliberately different amounts
-    ('M1', 'Emeka', 'Buyer Five', 'jamb-waec-art', 25000, 'Imo', 'delivered', 3000, 2000, '{"Literature":1}', LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '2 day'), LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '3 day')),
-    ('M2', 'Emeka', 'Buyer Six', 'waec-art', 9000, 'Imo', 'delivered', 1000, 900, '{"CRS":1}', LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '5 day'), LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '6 day')),
+    ('M1', 'Emeka', 'Buyer Five', '09067221234', 'jamb-waec-art', 25000, 'Imo', 'delivered', 3000, 2000, '{"Literature":1}', LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '2 day'), LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '3 day')),
+    ('M2', 'Emeka', 'Buyer Six', '+2349067225678', 'waec-art', 9000, 'Imo', 'delivered', 1000, 900, '{"CRS":1}', LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '5 day'), LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '6 day')),
     -- Nnacho: registered as a namespace, one delivered order
-    ('N1', 'Nnacho', 'Buyer Eight', 'waec-commercial', 14000, 'Ebonyi', 'delivered', 1800, 1400, '{"Accounting":1}', LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '4 day'), LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '5 day')),
+    ('N1', 'Nnacho', 'Buyer Eight', '07012345678', 'waec-commercial', 14000, 'Ebonyi', 'delivered', 1800, 1400, '{"Accounting":1}', LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '4 day'), LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '5 day')),
     -- Nanyalove: real source, NOT mapped to this client - scope must exclude it
-    ('Y1', 'Nanyalove', 'Buyer Nine', 'jamb-science', 30000, 'Enugu', 'delivered', 3500, 2500, '{"Physics":2}', LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '2 day'), LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '3 day')),
-    ('Y2', 'Nanyalove', 'Buyer Ten', 'waec-art', 16000, 'Lagos', 'delivered', 2000, 1600, '{"Literature":1}', LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '4 day'), LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '5 day')),
+    ('Y1', 'Nanyalove', 'Buyer Nine', '+14155552671', 'jamb-science', 30000, 'Enugu', 'delivered', 3500, 2500, '{"Physics":2}', LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '2 day'), LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '3 day')),
+    ('Y2', 'Nanyalove', 'Buyer Ten', '08011112222', 'waec-art', 16000, 'Lagos', 'delivered', 2000, 1600, '{"Literature":1}', LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '4 day'), LEAST(CURRENT_DATE, date_trunc('month', CURRENT_DATE) + interval '5 day')),
     -- Arinze: one delivered earlier in the year, to exercise the by-month path
-    ('A1', 'Arinze', 'Buyer Seven', 'jamb-commercial', 11000, 'Anambra', 'delivered', 1200, 1000, '{"Economics":1}', date_trunc('year', CURRENT_DATE) + interval '40 day', date_trunc('year', CURRENT_DATE) + interval '41 day')
+    ('A1', 'Arinze', 'Buyer Seven', '0805-999-1234', 'jamb-commercial', 11000, 'Anambra', 'delivered', 1200, 1000, '{"Economics":1}', date_trunc('year', CURRENT_DATE) + interval '40 day', date_trunc('year', CURRENT_DATE) + interval '41 day')
 ON CONFLICT (source, id)
   DO NOTHING;
 

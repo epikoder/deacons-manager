@@ -1,6 +1,7 @@
 import { SubscriberProvider } from "../../../@types/subscribers";
 import Bucket from "../../utils/bucket";
 import Carbon from "../../utils/carbon";
+import { normalizePhoneQuery } from "../../utils/phone";
 import { postgrest, WithAuth } from "../../utils/postgrest";
 import Order, { OrderItem } from "./order";
 
@@ -214,6 +215,7 @@ export default class OrderService extends SubscriberProvider<Order[]> {
       category?: string[];
       agent_id?: string;
       phone?: string;
+      search?: string;
     },
   ) {
     this._loading = true;
@@ -279,7 +281,20 @@ export default class OrderService extends SubscriberProvider<Order[]> {
       query.eq("agent_id", param.agent_id);
     }
     if (param.phone) {
-      query.ilike("phone", `%${param.phone}%`);
+      query = query.like("phone_digits", `%${normalizePhoneQuery(param.phone)}%`);
+    }
+
+    if (param.search) {
+      const raw = param.search.trim();
+      // These characters are part of PostgREST's or() grammar; leaving them in a value
+      // produces a malformed filter rather than an empty result.
+      const text = raw.replace(/[(),"\\*]/g, " ").trim();
+      const digits = normalizePhoneQuery(raw);
+      const clauses: string[] = [];
+      // Three digits is where a phone match stops being every row in the table.
+      if (digits.length >= 3) clauses.push(`phone_digits.like.*${digits}*`);
+      if (text.length >= 2) clauses.push(`fullname.ilike.*${text}*`);
+      if (clauses.length > 0) query = query.or(clauses.join(","));
     }
 
     const { data, count } = await new WithAuth(

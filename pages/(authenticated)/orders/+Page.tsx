@@ -203,9 +203,9 @@ export default function () {
   const debounce = (text: string) => {
     clearTimeout(interval);
     interval = setTimeout(async () => {
-      const a = await OrderService.instance.fetchOrders(1, {
+      await OrderService.instance.fetchOrders(1, {
         limit: 100,
-        phone: text,
+        search: text,
       });
     }, 500);
   };
@@ -411,7 +411,7 @@ export default function () {
       <div className="max-w-screen-sm p-4">
         <Input
           name="search"
-          placeholder="Search phone..."
+          placeholder="Search phone or surname..."
           sx="col-span-5 w-full"
           onChange={(ev) => debounce(ev.currentTarget.value)}
         />

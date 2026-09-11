@@ -9,5 +9,7 @@ export const emailValidator: Validator = (txt) => {
 export const phoneValidator: Validator = (
     phone?: NullString,
 ): NullString => {
-    return isValidPhoneNumber(phone ?? "") ? null : "phone is invalid";
+    // Without a default country isValidPhoneNumber("08031234567") is false: only
+    // +234... passed, so the format everyone actually types was rejected.
+    return isValidPhoneNumber(phone ?? "", "NG") ? null : "phone is invalid";
 };
