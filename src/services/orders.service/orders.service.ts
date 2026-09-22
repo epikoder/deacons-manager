@@ -226,15 +226,12 @@ export default class OrderService extends SubscriberProvider<Order[]> {
 
     this.notifySubscribers(this.orders);
 
-    let rngEnd = 50;
-    let offset = 0;
-    if (page <= 1) {
-      offset = 0;
-      rngEnd -= 1;
-    } else {
-      offset = (page - 1) * rngEnd;
-      rngEnd = offset + param.limit;
-    }
+    // range() is inclusive on both ends. The page size used to be a hardcoded 50 for
+    // the offset but param.limit for the end, so page 1 held 50 rows, page 2 asked for
+    // rows 50..150 (101 of them), and Pagination - which counts pages of param.limit -
+    // disagreed with both.
+    const limit = param.limit > 0 ? param.limit : 50;
+    const offset = (Math.max(page, 1) - 1) * limit;
 
     let query = postgrest
       .from("orders")
@@ -242,27 +239,26 @@ export default class OrderService extends SubscriberProvider<Order[]> {
       .order("created_at", {
         ascending: false,
       })
-      .range(offset, rngEnd);
+      .range(offset, offset + limit - 1);
     if (param.start_date) {
       query = query.gte("created_at", param.start_date);
     }
     if (param.end_date) {
       query = query.lte("created_at", param.end_date);
     }
-    if (param.confirmed) {
-      if (param.confirmed) {
-        query = query.not("confirmed_on", "is", null);
-      } else {
-        query = query.is("confirmed_on", null);
-      }
+    // `false` is a real filter (UnConfirmed / UnAssigned), so test for undefined -
+    // an `if (param.confirmed)` guard made the else branches unreachable and those
+    // filters only ever ran client-side, over whichever page the server returned.
+    if (param.confirmed !== undefined) {
+      query = param.confirmed
+        ? query.not("confirmed_on", "is", null)
+        : query.is("confirmed_on", null);
     }
 
-    if (param.assigned) {
-      if (param.assigned) {
-        query = query.not("agent_id", "is", null);
-      } else {
-        query = query.is("agent_id", null);
-      }
+    if (param.assigned !== undefined) {
+      query = param.assigned
+        ? query.not("agent_id", "is", null)
+        : query.is("agent_id", null);
     }
 
     if (param.category) {
