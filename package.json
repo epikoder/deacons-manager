@@ -25,11 +25,11 @@
     "vike-react": "^0.5.13"
   },
   "devDependencies": {
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
     "typescript": "^5.9.3",
     "vike": "^0.4.266",
-    "vite": "^5.4.21",
-    "@types/react": "^18.3.31",
-    "@types/react-dom": "^18.3.7"
+    "vite": "^7.1"
   },
   "type": "module"
 }
