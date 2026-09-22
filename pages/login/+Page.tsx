@@ -1,4 +1,4 @@
-import { ChangeEvent, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import Input from "../../src/components/Input";
 import Button from "../../src/components/Button";
 import { postgrest } from "../../src/utils/postgrest";
@@ -11,6 +11,12 @@ export default function () {
   const ref = useRef<HTMLFormElement>(null);
   const [message, setMessage] = useState<string | null>(null);
   const context = usePageContext();
+  // The page is server-rendered, so the form exists before React has attached
+  // onSubmit. Submitted in that window it fell back to a native GET and put the
+  // password in the URL - browser history, proxy and server logs. Keep the button
+  // disabled until hydration, and make the fallback a POST regardless.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
 
   const onSubmit = async () => {
     const isValid = ref.current?.checkValidity();
@@ -32,6 +38,7 @@ export default function () {
     <div className="h-screen w-screen flex flex-col justify-center items-center">
       <form
         ref={ref}
+        method="post"
         onSubmit={(ev) => {
           ev.preventDefault();
           onSubmit();
@@ -57,7 +64,7 @@ export default function () {
           autoComplete="current-password"
           onChange={_setFormState}
         />
-        <Button title="Login" className="bg-green-500" />
+        <Button title="Login" className="bg-green-500" disabled={!hydrated} />
       </form>
     </div>
   );
