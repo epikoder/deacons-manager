@@ -35,6 +35,12 @@ export default function () {
     [Carbon | undefined, Carbon | undefined]
   >([undefined, undefined]);
   const [page, setPage] = useState(1);
+  // A search looks across every order: it is how an admin finds one customer's
+  // history, so the status/affiliate/category/date filters - which persist in
+  // localStorage and are easy to forget are on - must not quietly narrow it.
+  const [search, setSearch] = useState("");
+  const searching = search.trim() !== "";
+  const searchTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const [_ready, _setReady] = useState(false);
   const toolBarRef = useRef<HTMLDivElement>(null);
@@ -84,6 +90,12 @@ export default function () {
   }, [filter, affiliateFilter, categoryFilter]);
 
   useEffect(() => {
+    // The search lives in state and goes through this one fetch, so paging a long
+    // result keeps the query instead of falling back to the unfiltered list.
+    if (searching) {
+      OrderService.instance.fetchOrders(page, { limit: 100, search });
+      return;
+    }
     OrderService.instance.fetchOrders(page, {
       limit: 100,
       start_date: dateFilter[0]?.formatLocalISO(),
@@ -110,9 +122,15 @@ export default function () {
         ? [...affiliateFilter.values()]
         : undefined,
     });
-  }, [page, filter, categoryFilter, affiliateFilter, dateFilter]);
+  }, [page, filter, categoryFilter, affiliateFilter, dateFilter, search]);
 
   const applyFilter = () => {
+    // The server has already done the matching; show all of it.
+    if (searching) {
+      return [...__orders].sort((o, o1) =>
+        o1.createdAt.getTime() - o.createdAt.getTime()
+      );
+    }
     let __: typeof __orders = [];
     for (const key of filter) {
       switch (key) {
@@ -199,14 +217,13 @@ export default function () {
 
   const orders = applyFilter();
 
-  let interval: ReturnType<typeof setTimeout>;
+  // The timer is a ref: a plain `let` is redeclared on every render, and each fetch
+  // re-renders the page, so it stopped debouncing after the first request.
   const debounce = (text: string) => {
-    clearTimeout(interval);
-    interval = setTimeout(async () => {
-      await OrderService.instance.fetchOrders(1, {
-        limit: 100,
-        search: text,
-      });
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => {
+      setPage(1);
+      setSearch(text);
     }, 500);
   };
 
@@ -415,6 +432,12 @@ export default function () {
           sx="col-span-5 w-full"
           onChange={(ev) => debounce(ev.currentTarget.value)}
         />
+        {searching && (
+          <div className="mt-2 text-xs text-zinc-500">
+            Searching all orders - the filters above don't apply while a search is
+            active.
+          </div>
+        )}
       </div>
       <div className="px-4 flex flex-col gap-4">
         {!OrderService.instance.loading && (

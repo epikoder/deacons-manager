@@ -297,13 +297,17 @@ export default class OrderService extends SubscriberProvider<Order[]> {
       if (clauses.length > 0) query = query.or(clauses.join(","));
     }
 
-    const { data, count } = await new WithAuth(
-      query.abortSignal(this._abortController!.signal),
-    ).unwrap();
+    const signal = this._abortController.signal;
+    const { data, count } = await new WithAuth(query.abortSignal(signal))
+      .unwrap();
+    // postgrest-js resolves an aborted request with data: null rather than throwing.
+    // A newer fetch owns the list by then, so this one must not clear it or touch the
+    // loading flag - and updateOrders(null) would throw on .reverse().
+    if (signal.aborted) return;
     this._totalOrders = count ?? 0;
     this._loading = false;
     this._orders.clear();
-    this.updateOrders(data as IOrder[], new Carbon());
+    this.updateOrders((data ?? []) as IOrder[], new Carbon());
   }
 
   private async updateOrders(orders: IOrder[], timestamp: Carbon) {
