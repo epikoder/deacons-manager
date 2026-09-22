@@ -92,6 +92,15 @@ export default function ({ children }: { children: React.ReactNode }) {
 		);
 
 		orderService.registerSource(
+			"utme2026topcandidate",
+			sourceUsingProductTable(
+				"https://utme2026topcandidate.prep50.com.ng/api/orders_v1",
+			),
+			"https://utme2026topcandidate.prep50.com.ng",
+			new Carbon(2025, 8, 1),
+		);
+
+		orderService.registerSource(
 			"Nanyalove",
 			sourceUsingJambWaec("https://nanyalove.com.ng/api.php"),
 			"https://nanyalove.com.ng",
