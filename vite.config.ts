@@ -15,19 +15,22 @@ import vike from "vike/plugin";
 let pgrestURL = process.env.PG_REST ?? "http://localhost:3001";
 
 export default defineConfig({
-  plugins: [vike({}), react({})],
-  server: {
-    // https: cert
-    //   ? {
-    //     cert,
-    //     key,
-    //   }
-    //   : undefined,
-    proxy: {
-      "/rest": {
-        target: pgrestURL,
-        rewrite: (path) => path.replace("/rest", ""),
-      },
-    },
-  },
+	plugins: [vike({}), react({})],
+	preview: {
+		allowedHosts: ["admin.prep50.ng"],
+	},
+	server: {
+		// https: cert
+		//   ? {
+		//     cert,
+		//     key,
+		//   }
+		//   : undefined,
+		proxy: {
+			"/rest": {
+				target: pgrestURL,
+				rewrite: (path) => path.replace("/rest", ""),
+			},
+		},
+	},
 });
