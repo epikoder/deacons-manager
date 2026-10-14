@@ -32,6 +32,13 @@ export default class Balance extends Observer {
   }
 
   public fetchEarningForYear(year: number) {
+    // An affiliate with no sources earns nothing. Sending source_filter: null
+    // would mean "unfiltered" and report the whole business's earnings as theirs.
+    if (!this._filter.id && (this._filter.source_filter?.length ?? 0) === 0) {
+      this._inner = { value: 0, total: 0 };
+      this.notifySubscribers();
+      return;
+    }
     new WithAuth(
       postgrest.rpc("get_earning_by_day", {
         month: new Carbon().getMonth() + 1,

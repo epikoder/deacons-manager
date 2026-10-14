@@ -20,3 +20,16 @@ const useOrders = (...args: Parameters<OrderService["fetchOrders"]>) => {
     }, []);
     return orders;
 };
+
+/** The shared order list, without fetching: for a page that calls fetchOrders itself. */
+export const useOrderList = () => {
+    const [orders, setOrders] = useState<Order[]>([]);
+    useEffect(() => {
+        const orderService = OrderService.instance;
+        const onChange = (next: Order[]) => setOrders(next);
+        orderService.subscribe(onChange);
+        setOrders(orderService.orders);
+        return () => orderService.unsubscribe(onChange);
+    }, []);
+    return orders;
+};

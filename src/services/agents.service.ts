@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { SubscriberProvider } from "../../@types/subscribers";
 import { Observer } from "../../@types/observable";
 import { postgrest, WithAuth } from "../utils/postgrest";
+import { normalizePhoneQuery } from "../utils/phone";
+import Toast, { escapeHtml } from "../utils/toast";
 import Carbon from "../utils/carbon";
 import Balance from "./balance";
 
@@ -26,43 +28,62 @@ export default class AgentService extends SubscriberProvider<Agent[]> {
     this._agents.set(agent.ID, agent);
   }
 
+  private _loading = false;
+  private _seq = 0;
+
+  get loading() {
+    return this._loading;
+  }
+
   async fetch(
     page = 1,
     param = {
       limit: 100,
     } as { limit: number; search?: string; state?: string },
   ) {
-    this._agents.clear();
-    let rngEnd = param.limit ?? 100;
-    let offset = 0;
-    if (page <= 1) {
-      offset = 0;
-      rngEnd -= 1;
-    } else {
-      offset = (page - 1) * rngEnd;
-      rngEnd = offset + param.limit;
-    }
+    // Only the newest request may replace the list: a slow earlier search
+    // resolving last would otherwise overwrite the results being typed for.
+    const seq = ++this._seq;
+    this._loading = true;
+    this.notifySubscribers(this.agents);
+    const limit = param.limit > 0 ? param.limit : 100;
+    // range() is inclusive; page 2 onwards used to ask for limit + 1 rows.
+    const offset = (Math.max(page, 1) - 1) * limit;
     let query = postgrest
       .from("agents")
       .select("*", { count: "exact" })
-      .range(offset, rngEnd);
-    if (param.search) {
-      query.or(
-        `phone.ilike.%${param.search}%,fullname.ilike.%${param.search}%`,
+      .order("fullname", { ascending: true })
+      .range(offset, offset + limit - 1);
+    const search = (param.search ?? "").replace(/[(),"\\*]/g, " ").trim();
+    if (search) {
+      // Phones are stored as 0XXXXXXXXXX, so match the digits whatever format
+      // was typed (+234 803..., 0803-...).
+      const digits = normalizePhoneQuery(search);
+      query = query.or(
+        [
+          `fullname.ilike."*${search}*"`,
+          ...(digits.length >= 3 ? [`phone.like."*${digits}*"`] : []),
+          `email.ilike."*${search}*"`,
+        ].join(","),
       );
     }
     if (param.state) {
-      query.eq("state", param.state);
+      query = query.eq("state", param.state);
     }
     const { data, error, count } = await new WithAuth(query).unwrap();
+    if (seq !== this._seq) return;
+    this._loading = false;
     if (error) {
+      console.error("agents query failed", error);
+      this.notifySubscribers(this.agents);
       return;
     }
-
+    this._agents.clear();
     this._total = count ?? 0;
-    data?.map((v) => this._agents.set(v.id, new Agent(v)));
+    ((data ?? []) as any[]).forEach((v: any) => this._agents.set(v.id, new Agent(v)));
     this.notifySubscribers(this.agents);
   }
+
 }
 
 export class Agent extends Observer {
@@ -140,15 +161,32 @@ export class Agent extends Observer {
     return this._inner.books ?? {};
   }
 
+  get email() {
+    return this._inner.email;
+  }
+
   async updateBooks(books: BookConfig): Promise<void> {
+    const previous = this._inner.books;
     this._inner.books = books;
-    await this.update();
+    try {
+      await this.update();
+    } catch (error) {
+      this._inner.books = previous;
+      this.notifySubscribers();
+      throw error;
+    }
   }
 
   async update() {
-    await new WithAuth(
+    const { error } = await new WithAuth(
       postgrest.from("agents").upsert(this._inner).eq("id", this._inner.id),
     ).unwrap();
+    if (error) {
+      // Failures used to vanish: the card showed the new books, the row did not.
+      console.error("agent save failed", error);
+      Toast.error(`Couldn't save agent: ${escapeHtml(error.message ?? "")}`);
+      throw error;
+    }
     this.notifySubscribers();
   }
 
@@ -157,7 +195,8 @@ export class Agent extends Observer {
   }
 }
 
-export const useAgent = () => {
+/** `autoFetch` false: the caller drives fetch() (paging, search, state filter). */
+export const useAgent = (autoFetch = true) => {
   const [agents, setAgents] = useState<Agent[]>([]);
   useEffect(() => {
     const agentService = AgentService.instance;
@@ -166,7 +205,7 @@ export const useAgent = () => {
     };
     agentService.subscribe(handleOrdersChange);
     setAgents(agentService.agents);
-    agentService.fetch();
+    if (autoFetch) agentService.fetch();
     return () => {
       agentService.unsubscribe(handleOrdersChange);
     };

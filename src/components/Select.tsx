@@ -78,16 +78,19 @@ export const MultiSelect = forwardRef(
             </em>
           )}
         </div>
-        <div className={"flex flex-wrap gap-3"}>
+        <div className={"flex flex-wrap gap-2"}>
           {items.map((v) => (
             <div
               key={v.getID()}
-              className={`w-fit px-2 py-1 rounded-full text-sm cursor-pointer hover:bg-zinc-300 aria-disabled:bg-zinc-600 aria-disabled:hover:bg-zinc-600 aria-disabled:text-white aria-disabled:cursor-not-allowed ${
+              className={`w-fit px-3 py-1 rounded-full border text-xs font-medium cursor-pointer transition-colors aria-disabled:bg-zinc-100 aria-disabled:text-zinc-400 aria-disabled:border-zinc-200 aria-disabled:cursor-not-allowed ${
                 _isSelected(v)
-                  ? "border-2 border-green-500"
-                  : "border border-gray-400"
+                  ? "border-green-600 bg-green-600 text-white"
+                  : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-100"
               }`}
               id={name + "." + v.getID()}
+              title={v.disabled && !_isSelected(v)
+                ? "Already belongs to another affiliate"
+                : undefined}
               onClick={disabled || v.disabled ? undefined : () => onTap(v)}
               aria-disabled={disabled || v.disabled}
             >
@@ -95,8 +98,8 @@ export const MultiSelect = forwardRef(
             </div>
           ))}
           {items.length == 0 && (
-            <div className={"whitespace-nowrap text-sm"}>
-              - - No items available - -
+            <div className={"whitespace-nowrap text-sm text-zinc-400"}>
+              No items available
             </div>
           )}
         </div>
@@ -231,8 +234,8 @@ export const SubjectSelect = forwardRef(
             </div>
           ))}
           {items.length == 0 && (
-            <div className={"whitespace-nowrap text-sm"}>
-              - - No items available - -
+            <div className={"whitespace-nowrap text-sm text-zinc-400"}>
+              No items available
             </div>
           )}
         </div>

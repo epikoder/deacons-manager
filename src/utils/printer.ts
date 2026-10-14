@@ -35,7 +35,9 @@ const printer = (el: HTMLElement): string | void => {
 
     setTimeout(async () => {
         iframe.contentWindow?.print();
-        document.removeChild(iframe);
+        // document.removeChild(iframe) threw (the iframe is in body, not a direct
+        // child of document), so every print left a hidden iframe behind.
+        iframe.remove();
     }, 1000);
 
 };

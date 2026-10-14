@@ -17,7 +17,7 @@ const StateComponent = forwardRef((
             ref={_ref}
             name="state"
             id="state"
-            className="outline outline-zinc-400 focus:outline-zinc-600 rounded-md py-1 text-sm"
+            className={props.className ?? "outline outline-zinc-400 focus:outline-zinc-600 rounded-md py-1 text-sm"}
         >
             <option value={""}>Select State</option>
             <option value="Abia">Abia</option>

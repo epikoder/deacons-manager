@@ -1,4 +1,5 @@
 import { useData } from "vike-react/useData";
+import { useEffect, useRef, useState } from "react";
 import CopyButton from "../../../../../src/components/CopyButton";
 import { Agent } from "../../../../../src/services/agents.service";
 import { useObserver } from "../../../../../@types/observable";
@@ -7,387 +8,195 @@ import {
   ChevronUp,
   PhoneIcon,
 } from "../../../../../src/components/Icons";
-import { Fragment, useEffect, useRef, useState } from "react";
-import { Bar } from "react-chartjs-2";
-import "chart.js/auto";
-import { ArcElement, Chart, registerables } from "chart.js";
-import { postgrest, WithAuth } from "../../../../../src/utils/postgrest";
-import Carbon, { Month } from "../../../../../src/utils/carbon";
-import { SelectMonth, SubjectSelect } from "../../../../../src/components/Select";
-import Button from "../../../../../src/components/Button";
+import Carbon from "../../../../../src/utils/carbon";
+import { SubjectSelect } from "../../../../../src/components/Select";
 import { showAlertDialog } from "../../../../../src/components/Dialog";
-import DropDown from "../../../../../src/components/Dropdown";
 import { useOrders } from "../../../../../src/services/orders.service/hook";
+import OrderService from "../../../../../src/services/orders.service/orders.service";
 import { OrderComponent } from "../../../../../src/components/Order.component";
+import OrderStatsCharts from "../../../../../src/components/OrderStatsCharts";
+import { booksHeld } from "../../../../../src/components/Agent.component";
+import {
+  Card,
+  fmtCount,
+  NotFound,
+  PageBody,
+  ProfileHeader,
+  secondaryButton,
+  smallButton,
+  StatTile,
+} from "../../../../../src/components/ui";
+import Toast from "../../../../../src/utils/toast";
+
+const bookOrder = (name: string) =>
+  name.includes("SSCE") ? 1 : name.includes("UTME") ? 2 : 0;
 
 export default function () {
   const { agent } = useData<{ agent?: Agent }>();
-  if (!agent) return <>NOT FOUND</>;
-  const [dayStats, setDayStats] = useState<DayStats[]>([]);
-  const [monthStats, setMonthStats] = useState<MonthStats[]>([]);
-  const [month, setMonth] = useState<Month>(new Carbon().getMonth());
-  const [year, setYear] = useState<number>(new Carbon().getFullYear());
-  useObserver(agent);
-
-  useEffect(() => {
-    Chart.register(ArcElement, ...registerables);
-  }, []);
-
-  const _loadDayStats = async () => {
-    const res1 = await new WithAuth(
-      postgrest.rpc("get_orders_by_day", {
-        month: month + 1,
-        year: new Carbon().getFullYear(),
-        agent: agent.ID,
-        source_filter: null,
-      }),
-    ).unwrap();
-    const _daystats = Array.from(
-      Array(
-        new Carbon().getMonth() == month
-          ? new Carbon().getDate()
-          : Carbon.fromMonth(month, 0).getDate(),
-      ).keys(),
-    ).map((day): DayStats => {
-      const date = Carbon.fromMonth(month, day + 1).format();
-      const stat = {
-        day: date,
-        delivered_count: 0,
-        order_count: 0,
-        pending_count: 0,
-        ...((res1.data ?? []) as DayStats[]).find((v) => v.day == date),
-      };
-      return stat;
-    });
-    setDayStats(_daystats);
-  };
-  useEffect(() => {
-    _loadDayStats();
-  }, [month]);
-
-  const _loadMonthStats = async () => {
-    const res2 = await new WithAuth(
-      postgrest.rpc("get_orders_by_month", {
-        year: year,
-        agent: agent.ID,
-        source_filter: null,
-      }),
-    ).unwrap();
-    const _monthstats = Array.from(
-      Array(
-        year == new Date().getFullYear() ? new Carbon().getMonth() + 1 : 11,
-      ).keys(),
-    ).map((month): MonthStats => {
-      const date = Carbon.fromYear(year, month).format();
-      const stat = {
-        month: date,
-        delivered_count: 0,
-        order_count: 0,
-        pending_count: 0,
-        ...((res2.data ?? []) as MonthStats[]).find((v) => v.month == date),
-      };
-      return stat;
-    });
-    setMonthStats(_monthstats);
-  };
-  useEffect(() => {
-    _loadMonthStats();
-  }, [year]);
-
-  return (
-    <div className="overflow-y-scroll flex flex-col gap-4 h-full p-4">
-      <div className="p-4 rounded-xl border border-zinc-200 bg-white shadow-sm flex flex-col gap-3">
-        <div className="flex justify-between">
-          <div className="flex items-center gap-1 font-semibold text-2xl">
-            {agent.name}
-            <CopyButton value={agent.name} label="Copy name" />
-          </div>
-          <div className="flex flex-col items-end">
-            <div className="flex items-center gap-3">
-              <a
-                className="flex gap-2 w-fit items-center"
-                href={`tel:${agent.phone}`}
-              >
-                <PhoneIcon className="size-3 text-blue-500" />
-                <div>{agent.phone}</div>
-              </a>
-              <CopyButton value={agent.phone} label="Copy phone number" />
-            </div>
-            <div className="font-semibold">{agent.state}</div>
-          </div>
-        </div>
-        <div className="flex justify-between items-end w-full">
-          <Earning agent={agent} />
-          <div className="flex gap-2 items-center">
-            <a href={`/agents/orders/${agent.ID}`}>
-              <div className="text-center text-white bg-blue-500 text-xs rounded-lg whitespace-nowrap px-4 py-1 hover:bg-opacity-75 w-fit">
-                View Orders
-              </div>
-            </a>
-            <a href={`/agents/report/${agent.ID}`}>
-              <div className="text-center text-white bg-cyan-500 text-xs rounded-lg whitespace-nowrap px-4 py-1 hover:bg-opacity-75 w-fit">
-                View Report
-              </div>
-            </a>
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-zinc-200 bg-white shadow-sm p-3">
-        <RecentOrders id={agent.ID} />
-      </div>
-
-      <div className="flex flex-col gap-3 p-4 rounded-xl border border-zinc-200 bg-white shadow-sm">
-        <div className="font-semibold">Books currently holding</div>
-        <div className="flex flex-wrap gap-4">
-          {Object.entries(agent.books)
-            .filter(([_, count]) => count > 0)
-            .sort(([a], [b]) => a.charCodeAt(0) - b.charCodeAt(0))
-            .sort(([a], [b]) =>
-              (a.includes("SSCE") ? 1 : a.includes("UTME") ? 2 : 0) -
-              (b.includes("SSCE") ? 1 : b.includes("UTME") ? 2 : 0)
-            )
-            .map(([name, count]) => (
-              <div key={name} className="text-sm">
-                {name} : {count}
-              </div>
-            ))}
-        </div>
-        {Object.entries(agent.books).filter(([_, count]) => count > 0)
-          .isEmpty() && <div className="text-center">-- no books --</div>}
-        <AssignAgentBooks agent={agent} />
-      </div>
-      <div className="flex flex-col gap-8">
-        <div className="rounded-xl border border-zinc-200 bg-white shadow-sm px-4">
-          <div className="flex justify-end text-sm">
-            <SelectMonth
-              defaultValue={month}
-              onChange={(ev) => setMonth(parseInt(ev.currentTarget.value))}
-            />
-          </div>
-          <Bar
-            className="max-h-96"
-            options={{
-              plugins: {
-                title: {
-                  display: true,
-                  font: { size: 16, weight: "bold" },
-                  text: `Orders for ${Carbon.monthString(month)}: ${
-                    dayStats.map((v) => v.order_count).sum()
-                  }`,
-                },
-                subtitle: {
-                  display: true,
-                  font: { size: 14, weight: "bold" },
-                  text: `pending: ${
-                    dayStats.map((v) => v.pending_count).sum()
-                  } / Delivered: ${
-                    dayStats.map((v) => v.delivered_count).sum()
-                  }`,
-                },
-              },
-              scales: {
-                x: {
-                  stacked: true,
-                },
-                y: {
-                  stacked: true,
-                },
-              },
-            }}
-            data={{
-              labels: dayStats.map((v) =>
-                new Carbon(v.day)
-                  .toDateString()
-                  .split(" ")
-                  .slice(0, 3)
-                  .join(" ")
-              ),
-              datasets: [
-                {
-                  label: "Pending",
-                  data: dayStats.map((v) => v.pending_count),
-                },
-                {
-                  label: "Delivered",
-                  data: dayStats.map((v) => v.delivered_count),
-                },
-              ],
-            }}
-          />
-        </div>
-        <div className="rounded-xl border border-zinc-200 bg-white shadow-sm px-4">
-          <div className="flex justify-end text-sm">
-            <select
-              defaultValue={year}
-              onChange={(ev) => setYear(parseInt(ev.currentTarget.value))}
-              className="outline-none"
-            >
-              {Array.from(
-                Array(new Carbon().getFullYear() - 2024 + 1).keys(),
-              ).map((k) => (
-                <option
-                  key={new Carbon().getFullYear() - k}
-                  value={new Carbon().getFullYear() - k}
-                >
-                  {new Carbon().getFullYear() - k}
-                </option>
-              ))}
-            </select>
-          </div>
-          <Bar
-            className="max-h-96"
-            options={{
-              plugins: {
-                title: {
-                  display: true,
-                  font: { size: 16, weight: "bold" },
-                  text: `Orders for ${"2024"}: ${
-                    monthStats.map((v) => v.order_count).sum()
-                  }`,
-                },
-                subtitle: {
-                  display: true,
-                  font: { size: 14, weight: "bold" },
-                  text: `pending: ${
-                    monthStats.map((v) => v.pending_count).sum()
-                  } / Delivered: ${
-                    monthStats.map((v) => v.delivered_count).sum()
-                  }`,
-                },
-              },
-              scales: {
-                x: {
-                  stacked: true,
-                },
-                y: {
-                  stacked: true,
-                },
-              },
-            }}
-            data={{
-              labels: monthStats.map((v) => new Carbon(v.month).month),
-              datasets: [
-                {
-                  label: "Pending",
-                  data: monthStats.map((v) => v.pending_count),
-                },
-                {
-                  label: "Delivered",
-                  data: monthStats.map((v) => v.delivered_count),
-                },
-              ],
-            }}
-          />
-        </div>
-      </div>
-    </div>
-  );
+  if (!agent) {
+    return <NotFound what="Agent" back={{ href: "/agents", label: "Agents" }} />;
+  }
+  return <AgentProfile agent={agent} />;
 }
 
-const Earning = ({ agent }: { agent: Agent }) => {
+function AgentProfile({ agent }: { agent: Agent }) {
+  useObserver(agent);
   const [year, setYear] = useState(new Date().getFullYear());
 
+  // Balance is "this month" and "whole year" for the chosen year.
   useEffect(() => {
     agent.Balance().fetchEarningForYear(year);
   }, [year]);
 
+  const monthName = new Carbon().month;
+
   return (
-    <div className="text-zinc-600 flex flex-col gap-1">
-      <select
-        defaultValue={year}
-        onChange={(ev) => setYear(parseInt(ev.currentTarget.value))}
-        className="outline-none text-xs w-fit"
-      >
-        {Array.from(Array(new Carbon().getFullYear() - 2024 + 1).keys()).map(
-          (k) => (
-            <option
-              key={new Carbon().getFullYear() - k}
-              value={new Carbon().getFullYear() - k}
-            >
-              {new Carbon().getFullYear() - k}
-            </option>
-          ),
+    <PageBody>
+      <ProfileHeader
+        back={{ href: "/agents", label: "Agents" }}
+        name={agent.name}
+        nameExtra={agent.state && (
+          <span className="rounded-md bg-zinc-100 px-1.5 py-0.5 text-[11px] font-medium text-zinc-600">
+            {agent.state}
+          </span>
         )}
-      </select>
-      <div>
-        <span className="font-semibold text-2xl">
-          {agent.balance[0].asLocalCurrency()}
-        </span>
-        &nbsp;
-        <span className="text-xs">{new Carbon().month}</span>
-        &nbsp;
-        <span>/</span>
-        &nbsp;
-        <span>{agent.balance[1].asLocalCurrency()}</span>
-        &nbsp;
-        <span className="text-xs">total</span>
-      </div>
-    </div>
-  );
-};
+        meta={
+          <>
+            <span className="flex items-center gap-1">
+              <a
+                href={`tel:${agent.phone}`}
+                className="flex items-center gap-1.5 text-blue-600 hover:underline tabular-nums"
+              >
+                <PhoneIcon className="size-3" />
+                {agent.phone}
+              </a>
+              <CopyButton value={agent.phone} label="Copy phone number" />
+            </span>
+            {agent.email && <span>{agent.email}</span>}
+          </>
+        }
+        actions={
+          <>
+            <a href={`/agents/orders/${agent.ID}`} className={secondaryButton}>
+              All orders
+            </a>
+            <a href={`/agents/report/${agent.ID}`} className={secondaryButton}>
+              Delivery report
+            </a>
+          </>
+        }
+      />
 
-const AssignAgentBooks = ({ agent }: { agent: Agent }) => {
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatTile
+          label={`Orders in ${monthName}`}
+          value={fmtCount(agent.totalOrderForCurrentCycle)}
+        />
+        <StatTile label="All orders" value={fmtCount(agent.totalOrders)} />
+        <StatTile
+          label={`Earned in ${monthName} ${year}`}
+          value={agent.balance[0].asLocalCurrency()}
+        />
+        <StatTile
+          label={`Earned in ${year}`}
+          value={agent.balance[1].asLocalCurrency()}
+        />
+      </div>
+
+      <BooksCard agent={agent} />
+      <PendingOrders id={agent.ID} />
+      <OrderStatsCharts agent={agent.ID} year={year} onYearChange={setYear} />
+    </PageBody>
+  );
+}
+
+function BooksCard({ agent }: { agent: Agent }) {
   const ref = useRef<{ getItems: () => BookConfig }>();
+  const books = Object.entries(agent.books)
+    .filter(([, count]) => count > 0)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([a], [b]) => bookOrder(a) - bookOrder(b));
 
   return (
-    <Button
-      className="bg-green-500 w-fit px-8 mx-auto"
-      onClick={() => {
-        showAlertDialog({
-          title: "Assign Books",
-          message: (
-            <div>
-              <SubjectSelect ref={ref} defaultValue={agent.books} />
-            </div>
-          ),
-          onContinue: () => agent.updateBooks(ref.current!.getItems()),
-        });
-      }}
+    <Card
+      title="Books held"
+      description={`${fmtCount(booksHeld(agent.books))} books across ${
+        books.length
+      } subject${books.length === 1 ? "" : "s"}`}
+      actions={
+        <button
+          type="button"
+          className={smallButton}
+          onClick={() =>
+            showAlertDialog({
+              title: "Update books",
+              confirmLabel: "Save books",
+              message: <SubjectSelect ref={ref} defaultValue={agent.books} />,
+              onContinue: async () => {
+                await agent.updateBooks(ref.current!.getItems());
+                Toast.success("Books updated");
+              },
+            })}
+        >
+          Update books
+        </button>
+      }
     >
-      Update Books
-    </Button>
+      {books.length
+        ? (
+          <div className="flex flex-wrap gap-1.5">
+            {books.map(([name, count]) => (
+              <span
+                key={name}
+                className="inline-flex items-center gap-1.5 rounded-md bg-zinc-100 px-2 py-1 text-xs"
+              >
+                {name}
+                <b className="tabular-nums">{count}</b>
+              </span>
+            ))}
+          </div>
+        )
+        : <p className="text-sm text-zinc-500">Not holding any books.</p>}
+    </Card>
   );
-};
+}
 
-const RecentOrders = ({ id }: { id: string }) => {
+function PendingOrders({ id }: { id: string }) {
+  const [open, setOpen] = useState(false);
   const orders = useOrders(1, {
     limit: 100,
     agent_id: id,
     delivery_status: "pending",
-  })
-    .sort((o, o1) => o1.createdAt.getTime() - o.createdAt.getTime())
-    .slice(0, 10);
+  }).sort((o, o1) => o1.createdAt.getTime() - o.createdAt.getTime());
+  const loading = OrderService.instance.loading;
 
   return (
-    <DropDown className="flex flex-col gap-4">
-      {(isOpen) => [
-        <div className="text-xs cursor-pointer flex items-center gap-3 w-fit">
-          <span className="font-semibold">
-            Pending orders -- {orders.length}
-          </span>
-          <span className="relative size-5">
-            <ChevronDown
-              className={`absolute transition-all duration-300 ${
-                isOpen ? "opacity-0" : ""
-              }`}
-            />
-            <ChevronUp
-              className={`absolute transition-all duration-300 ${
-                !isOpen ? "opacity-0" : ""
-              }`}
-            />
-          </span>
-        </div>,
-        <Fragment>
-          {orders.map((order) => (
-            <OrderComponent
-              key={order.ID}
-              order={order}
-            />
-          ))}
-        </Fragment>,
-      ]}
-    </DropDown>
+    <Card
+      title="Pending deliveries"
+      description={loading
+        ? "Loading…"
+        : orders.length
+        ? `${fmtCount(orders.length)} assigned and not yet delivered`
+        : "Nothing waiting to be delivered"}
+      actions={orders.length > 0 && (
+        <button
+          type="button"
+          aria-expanded={open}
+          className={smallButton}
+          onClick={() => setOpen(!open)}
+        >
+          {open ? "Hide" : "Show"}
+          {open
+            ? <ChevronUp className="size-3.5" />
+            : <ChevronDown className="size-3.5" />}
+        </button>
+      )}
+      bodyClass="flex flex-col gap-3 bg-zinc-50/60 p-4"
+    >
+      {open && orders.length > 0 &&
+        orders.map((order) => (
+          <OrderComponent key={order.getUniqueID} order={order} />
+        ))}
+    </Card>
   );
-};
+}

@@ -17,6 +17,7 @@ scopes) live in the database.
 - [Migrations](#migrations)
 - [Orders](#orders)
 - [Dashboard](#dashboard)
+- [Agents and affiliates](#agents-and-affiliates)
 - [Users](#users)
 - [Project layout](#project-layout)
 - [Scripts](#scripts)
@@ -137,6 +138,25 @@ back to its previous state.
 
 The charts use Chart.js through `react-chartjs-2`. The colours are a palette checked
 to be colour-blind safe, defined in `VIZ` at the top of the page.
+
+## Agents and affiliates
+
+- **Lists** (`/agents`, `/affiliates`): search by name, phone (any format) or email,
+  with paging; Agents also filters by state.
+- **Profiles:** contact details, orders this month and in total, earnings for the
+  chosen year, books held (agents), order sources (affiliates), and two charts: orders
+  per day for a month and per month for a year, split into delivered and pending.
+  They're built from `get_orders_by_day` / `get_orders_by_month` in
+  `src/hooks/useOrderStats.ts`.
+- **Reports** (`/agents/report/<id>`, `/affiliates/report/<id>`): delivered orders for
+  a month or a whole year, with the delivery charge (agents) or affiliate earning
+  per order, and Print. Both use `src/components/DeliveryReport.tsx`. Affiliate
+  sources are matched ignoring case, as the earnings functions do.
+- **Agent orders** (`/agents/orders/<id>`): that agent's orders through the
+  same order service as the Orders page, filterable by delivery status.
+
+Shared page pieces (header, cards, stat tiles, search box, buttons) live in
+`src/components/ui.tsx`.
 
 ## Users
 

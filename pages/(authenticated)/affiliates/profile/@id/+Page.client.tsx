@@ -1,292 +1,108 @@
 import { useData } from "vike-react/useData";
+import { useEffect, useState } from "react";
 import CopyButton from "../../../../../src/components/CopyButton";
 import { useObserver } from "../../../../../@types/observable";
 import { PhoneIcon } from "../../../../../src/components/Icons";
-import { useEffect, useRef, useState } from "react";
-import { Bar } from "react-chartjs-2";
-import "chart.js/auto";
-import { ArcElement, Chart, registerables } from "chart.js";
-import { postgrest, WithAuth } from "../../../../../src/utils/postgrest";
-import Carbon, { Month } from "../../../../../src/utils/carbon";
+import Carbon from "../../../../../src/utils/carbon";
 import { Affiliate } from "../../../../../src/services/affiliate.service";
-import { SelectMonth } from "../../../../../src/components/Select";
+import OrderStatsCharts from "../../../../../src/components/OrderStatsCharts";
+import { SourceChips } from "../../../../../src/components/Affiliate.component";
+import {
+  Card,
+  fmtCount,
+  NotFound,
+  PageBody,
+  ProfileHeader,
+  secondaryButton,
+  StatTile,
+} from "../../../../../src/components/ui";
 
 export default function () {
   const { affiliate } = useData<{ affiliate?: Affiliate }>();
-  if (!affiliate) return <>NOT FOUND</>;
-
-  const [dayStats, setDayStats] = useState<DayStats[]>([]);
-  const [monthStats, setMonthStats] = useState<MonthStats[]>([]);
-  const [month, setMonth] = useState<Month>(new Carbon().getMonth());
-  const [year, setYear] = useState<number>(new Carbon().getFullYear());
-  useObserver(affiliate);
-
-  useEffect(() => {
-    Chart.register(ArcElement, ...registerables);
-  }, []);
-
-  const _loadDayStats = async () => {
-    const res1 = await new WithAuth(
-      postgrest.rpc("get_orders_by_day", {
-        month: month + 1,
-        year: new Carbon().getFullYear(),
-        agent: null,
-        source_filter: affiliate.source,
-      }),
-    ).unwrap();
-    const _daystats = Array.from(
-      Array(
-        new Carbon().getMonth() == month
-          ? new Carbon().getDate()
-          : Carbon.fromMonth(month, 0).getDate(),
-      ).keys(),
-    ).map((day): DayStats => {
-      const date = Carbon.fromMonth(month, day + 1).format();
-      const stat = {
-        day: date,
-        delivered_count: 0,
-        order_count: 0,
-        pending_count: 0,
-        ...((res1.data ?? []) as DayStats[]).find((v) => v.day == date),
-      };
-      return stat;
-    });
-    setDayStats(_daystats);
-  };
-  useEffect(() => {
-    _loadDayStats();
-  }, [month]);
-
-  const _loadMonthStats = async () => {
-    const res2 = await new WithAuth(
-      postgrest.rpc("get_orders_by_month", {
-        year: year,
-        agent: null,
-        source_filter: affiliate.source,
-      }),
-    ).unwrap();
-    const _monthstats = Array.from(
-      Array(
-        year == new Date().getFullYear() ? new Carbon().getMonth() + 1 : 11,
-      ).keys(),
-    ).map((month): MonthStats => {
-      const date = Carbon.fromYear(year, month).format();
-      const stat = {
-        month: date,
-        delivered_count: 0,
-        order_count: 0,
-        pending_count: 0,
-        ...((res2.data ?? []) as MonthStats[]).find((v) => v.month == date),
-      };
-      return stat;
-    });
-    setMonthStats(_monthstats);
-  };
-  useEffect(() => {
-    _loadMonthStats();
-  }, [year]);
-
-  return (
-    <div className="overflow-y-scroll flex flex-col gap-4 h-full p-4">
-      <div className="p-4 rounded-xl border border-zinc-200 bg-white shadow-sm flex flex-col gap-3">
-        <div className="flex justify-between">
-          <div className="flex items-center gap-1 font-semibold text-2xl">
-            {affiliate.name}
-            <CopyButton value={affiliate.name} label="Copy name" />
-          </div>
-          <div className="flex flex-col items-end">
-            <div className="flex items-center gap-3">
-              <a
-                className="flex gap-2 w-fit items-center"
-                href={`tel:${affiliate.phone}`}
-              >
-                <PhoneIcon className="size-3 text-blue-500" />
-                <div>{affiliate.phone}</div>
-              </a>
-              <CopyButton value={affiliate.phone} label="Copy phone number" />
-            </div>
-            <div className="font-semibold">{affiliate.email}</div>
-          </div>
-        </div>
-        <Earning affiliate={affiliate} />
-      </div>
-
-      <div className="flex flex-col gap-8">
-        <div className="rounded-xl border border-zinc-200 bg-white shadow-sm px-4">
-          <div className="flex justify-end text-sm">
-            <SelectMonth
-              defaultValue={month}
-              onChange={(ev) => setMonth(parseInt(ev.currentTarget.value))}
-            />
-          </div>
-          <Bar
-            className="max-h-96"
-            options={{
-              plugins: {
-                title: {
-                  display: true,
-                  font: { size: 16, weight: "bold" },
-                  text: `Orders for ${Carbon.monthString(month)}: ${
-                    dayStats.map((v) => v.order_count).sum()
-                  }`,
-                },
-                subtitle: {
-                  display: true,
-                  font: { size: 14, weight: "bold" },
-                  text: `pending: ${
-                    dayStats.map((v) => v.pending_count).sum()
-                  } / Delivered: ${
-                    dayStats.map((v) => v.delivered_count).sum()
-                  }`,
-                },
-              },
-              scales: {
-                x: {
-                  stacked: true,
-                },
-                y: {
-                  stacked: true,
-                },
-              },
-            }}
-            data={{
-              labels: dayStats.map((v) =>
-                new Carbon(v.day)
-                  .toDateString()
-                  .split(" ")
-                  .slice(0, 3)
-                  .join(" ")
-              ),
-              datasets: [
-                {
-                  label: "Pending",
-                  data: dayStats.map((v) => v.pending_count),
-                },
-                {
-                  label: "Delivered",
-                  data: dayStats.map((v) => v.delivered_count),
-                },
-              ],
-            }}
-          />
-        </div>
-
-        <div className="rounded-xl border border-zinc-200 bg-white shadow-sm px-4">
-          <div className="flex justify-end text-sm">
-            <select
-              defaultValue={year}
-              onChange={(ev) => setYear(parseInt(ev.currentTarget.value))}
-              className="outline-none"
-            >
-              {Array.from(
-                Array(new Carbon().getFullYear() - 2024 + 1).keys(),
-              ).map((k) => (
-                <option
-                  key={new Carbon().getFullYear() - k}
-                  value={new Carbon().getFullYear() - k}
-                >
-                  {new Carbon().getFullYear() - k}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <Bar
-            className="max-h-96"
-            options={{
-              plugins: {
-                title: {
-                  display: true,
-                  font: { size: 16, weight: "bold" },
-                  text: `Orders for ${"2024"}: ${
-                    monthStats.map((v) => v.order_count).sum()
-                  }`,
-                },
-                subtitle: {
-                  display: true,
-                  font: { size: 14, weight: "bold" },
-                  text: `pending: ${
-                    monthStats.map((v) => v.pending_count).sum()
-                  } / Delivered: ${
-                    monthStats.map((v) => v.delivered_count).sum()
-                  }`,
-                },
-              },
-              scales: {
-                x: {
-                  stacked: true,
-                },
-                y: {
-                  stacked: true,
-                },
-              },
-            }}
-            data={{
-              labels: monthStats.map((v) => new Carbon(v.month).month),
-              datasets: [
-                {
-                  label: "Pending",
-                  data: monthStats.map((v) => v.pending_count),
-                },
-                {
-                  label: "Delivered",
-                  data: monthStats.map((v) => v.delivered_count),
-                },
-              ],
-            }}
-          />
-        </div>
-      </div>
-    </div>
-  );
+  if (!affiliate) {
+    return (
+      <NotFound
+        what="Affiliate"
+        back={{ href: "/affiliates", label: "Affiliates" }}
+      />
+    );
+  }
+  return <AffiliateProfile affiliate={affiliate} />;
 }
 
-const Earning = ({ affiliate }: { affiliate: Affiliate }) => {
+function AffiliateProfile({ affiliate }: { affiliate: Affiliate }) {
+  useObserver(affiliate);
   const [year, setYear] = useState(new Date().getFullYear());
 
   useEffect(() => {
     affiliate.Balance().fetchEarningForYear(year);
   }, [year]);
 
+  const monthName = new Carbon().month;
+  const sources = affiliate.source ?? [];
+
   return (
-    <div className="flex justify-between items-end">
-      <div className="text-zinc-600 flex flex-col gap-1">
-        <select
-          defaultValue={year}
-          onChange={(ev) => setYear(parseInt(ev.currentTarget.value))}
-          className="outline-none text-xs w-fit"
-        >
-          {Array.from(Array(new Carbon().getFullYear() - 2024 + 1).keys()).map(
-            (k) => (
-              <option
-                key={new Carbon().getFullYear() - k}
-                value={new Carbon().getFullYear() - k}
+    <PageBody>
+      <ProfileHeader
+        back={{ href: "/affiliates", label: "Affiliates" }}
+        name={affiliate.name}
+        meta={
+          <>
+            <span className="flex items-center gap-1">
+              <a
+                href={`tel:${affiliate.phone}`}
+                className="flex items-center gap-1.5 text-blue-600 hover:underline tabular-nums"
               >
-                {new Carbon().getFullYear() - k}
-              </option>
-            ),
-          )}
-        </select>
-        <div>
-          <span className="font-semibold text-2xl">
-            {affiliate.balance[0].asLocalCurrency()}
-          </span>
-          &nbsp;
-          <span className="text-xs">{new Carbon().month}</span>
-          &nbsp;
-          <span>/</span>
-          &nbsp;
-          <span>{affiliate.balance[1].asLocalCurrency()}</span>
-          &nbsp;
-          <span className="text-xs">total</span>
-        </div>
+                <PhoneIcon className="size-3" />
+                {affiliate.phone}
+              </a>
+              <CopyButton value={affiliate.phone} label="Copy phone number" />
+            </span>
+            {affiliate.email && <span>{affiliate.email}</span>}
+          </>
+        }
+        actions={
+          <>
+            <a
+              href={encodeURI(`/orders?affiliate=${affiliate.ID}`)}
+              className={secondaryButton}
+            >
+              Orders
+            </a>
+            <a
+              href={`/affiliates/report/${affiliate.ID}`}
+              className={secondaryButton}
+            >
+              Earnings report
+            </a>
+          </>
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatTile
+          label={`Orders in ${monthName}`}
+          value={fmtCount(affiliate.totalOrderForCurrentCycle)}
+        />
+        <StatTile label="All orders" value={fmtCount(affiliate.totalOrders)} />
+        <StatTile
+          label={`Earned in ${monthName} ${year}`}
+          value={affiliate.balance[0].asLocalCurrency()}
+        />
+        <StatTile
+          label={`Earned in ${year}`}
+          value={affiliate.balance[1].asLocalCurrency()}
+        />
       </div>
 
-      <a href={`/affiliates/report/${affiliate.ID}`}>
-        <div className="text-center text-white bg-cyan-500 text-xs rounded-lg whitespace-nowrap px-4 py-1 hover:bg-opacity-75 w-fit">
-          View Report
-        </div>
-      </a>
-    </div>
+      <Card
+        title="Order sources"
+        description="Orders from these sites count for this affiliate."
+      >
+        <SourceChips sources={sources} />
+      </Card>
+
+      <OrderStatsCharts sources={sources} year={year} onYearChange={setYear} />
+    </PageBody>
   );
-};
+}
