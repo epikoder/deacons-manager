@@ -1,4 +1,5 @@
 import { Fragment } from "react/jsx-runtime";
+import CopyButton from "./CopyButton";
 import { useObserver } from "../../@types/observable";
 import { Agent } from "../services/agents.service";
 import DropDown from "./Dropdown";
@@ -6,7 +7,6 @@ import {
   ActivityIndicator,
   ChevronDown,
   ChevronUp,
-  CopyIcon,
   PhoneIcon,
 } from "./Icons";
 import { useEffect, useState } from "react";
@@ -19,10 +19,13 @@ export const AgentComponent = ({ agent }: { agent: Agent }) => {
   useObserver(agent);
 
   return (
-    <div onClick={() => console.log(agent)} className="rounded-lg shadow-md">
+    <div onClick={() => console.log(agent)} className="rounded-xl border border-zinc-200 bg-white shadow-sm">
       <div className="p-4 flex gap-8 justify-between">
         <div>
-          <div>{agent.name}</div>
+          <div className="flex items-center gap-1 font-semibold">
+            {agent.name}
+            <CopyButton value={agent.name} label="Copy name" />
+          </div>
           <div className="text-zinc-600">
             <span className="font-semibold text-2xl">
               {Intl.NumberFormat().format(agent.totalOrderForCurrentCycle)}
@@ -45,15 +48,7 @@ export const AgentComponent = ({ agent }: { agent: Agent }) => {
               <PhoneIcon className="size-3 text-blue-500" />
               <div>{agent.phone}</div>
             </a>
-            <button
-              className="px-1"
-              onClick={() => {
-                navigator.clipboard.writeText(agent.phone);
-                alert("copied!!");
-              }}
-            >
-              <CopyIcon className="size-4" />
-            </button>
+            <CopyButton value={agent.phone} label="Copy phone number" />
           </div>
           <div className="font-bold">{agent.state}</div>
         </div>

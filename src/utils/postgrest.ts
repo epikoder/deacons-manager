@@ -84,7 +84,18 @@ export class WithAuth<
       }
 
       isRefreshing = true;
-      if (!(await refreshToken())) {
+      let refreshed = false;
+      try {
+        refreshed = await refreshToken();
+      } finally {
+        // On every exit. A failed refresh used to leave this set, so each request after
+        // it was queued behind a refresh that would never finish - and its caller (an
+        // order search, say) waited forever.
+        isRefreshing = false;
+        processRefreshQueue();
+      }
+      if (!refreshed) {
+        OrderService.instance.stopBackgroundPull();
         navigate("/login");
         return response;
       }
@@ -92,8 +103,6 @@ export class WithAuth<
       const newAuth = JSON.parse(sessionStorage.getItem(AUTH_KEY) ?? "{}");
       this._inner.setHeader("Authorization", `Bearer ${newAuth.access_token}`);
       response = await this._inner;
-      isRefreshing = false;
-      processRefreshQueue();
     }
 
     return response;
@@ -109,7 +118,7 @@ async function refreshToken(): Promise<boolean> {
   const { data, error } = await postgrest.rpc("refresh_token", {
     refresh_token,
   });
-  if (error) return false;
+  if (error || !data) return false;
 
   saveAuthToken(data);
   return true;

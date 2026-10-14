@@ -9,6 +9,17 @@ body {
     width: 100%;
 }
 
+html {
+    /* The app has no dark theme; keep form controls and scrollbars light too. */
+    color-scheme: light;
+}
+
+body {
+    background: #fafafa;
+    color: #18181b;
+    -webkit-font-smoothing: antialiased;
+}
+
 * {
     font-family: Outfit;
 }
@@ -51,7 +62,7 @@ body {
 }
 
 .rc-virtual-list-holder-inner {
-    gap: 20px;
+    gap: 16px;
 }
 
 table.custom-table {

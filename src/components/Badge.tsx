@@ -21,7 +21,7 @@ export default function Badge<T>(
             onClick={() => setShowBadge(false)}
         >
             {showBadge && (
-                <span className="rounded-full size-2 bg-red-500 animate-pulse absolute top-1 right-1">
+                <span className="rounded-full size-2 bg-red-500 animate-pulse absolute top-1/2 -translate-y-1/2 right-3">
                 </span>
             )}
             {children}

@@ -26,13 +26,13 @@ const Input = forwardRef(
 
     return (
       <div
-        className={`rounded-md border ${
+        className={`rounded-lg border bg-white ${
           inputProps.disabled
-            ? "border-gray-200"
+            ? "border-zinc-200 bg-zinc-50"
             : _isvalid()
-            ? "border-gray-500"
-            : "border-red-500"
-        } px-2 focus-within:border-2 text-sm ${resetSize ? "" : "w-full"} ${
+            ? "border-zinc-300 focus-within:border-green-500 focus-within:ring-2 focus-within:ring-green-500/20"
+            : "border-red-500 focus-within:ring-2 focus-within:ring-red-500/20"
+        } px-2.5 transition-shadow text-sm ${resetSize ? "" : "w-full"} ${
           sx ?? ""
         }`}
       >
@@ -40,7 +40,7 @@ const Input = forwardRef(
           ref={ref as ForwardedRef<HTMLInputElement>}
           placeholder=""
           {...inputProps}
-          className={`outline-none hover:outline-none py-1 ${
+          className={`outline-none hover:outline-none bg-transparent py-1.5 ${
             resetSize ? "" : "min-w-32"
           } w-full ${className}`}
           onBlur={(ev) => {

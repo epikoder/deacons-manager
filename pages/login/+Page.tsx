@@ -43,7 +43,7 @@ export default function () {
           ev.preventDefault();
           onSubmit();
         }}
-        className="mx-auto max-w-lg w-full flex flex-col gap-3 place-items-center p-8 rounded-md shadow-md px-12"
+        className="mx-auto max-w-lg w-full flex flex-col gap-3 place-items-center p-8 rounded-xl border border-zinc-200 bg-white shadow-sm px-12"
       >
         <div className="text-lg">Login</div>
         <div>Welcome Back</div>

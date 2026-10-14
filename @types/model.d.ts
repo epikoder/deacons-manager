@@ -30,6 +30,8 @@ interface IOrder {
   assigned_on?: string;
   confirmed_on?: string;
   delivered_on?: string;
+  /** Hidden from lists and charts (duplicate submissions), but kept. */
+  archived_on?: string | null;
   created_at: string;
 }
 

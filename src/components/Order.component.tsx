@@ -24,143 +24,190 @@ import { Agent } from "../services/agents.service";
 
 import Input from "./Input";
 import OrderService from "../services/orders.service/orders.service";
-import { CopyIcon, InfoIcon, PenIcon, PhoneIcon } from "./Icons";
+import {
+  ArchiveIcon,
+  InfoIcon,
+  PenIcon,
+  PhoneIcon,
+  RestoreIcon,
+} from "./Icons";
+import CopyButton from "./CopyButton";
 import Toast from "../utils/toast";
 import StateComponent from "./State.component";
 
 const context = createContext<Order | undefined>(undefined);
+
+/** Re-run the list on screen so the order leaves a view it no longer matches. */
+const refreshList = () => OrderService.instance.refresh();
+
 export const OrderComponent = forwardRef(({ order }: { order: Order }, ref) => {
   useObserver(order);
 
   return (
     <context.Provider value={order}>
       <div
-        className="rounded-lg shadow-md pt-3 w-full flex flex-col gap-2"
+        className={`rounded-xl border bg-white shadow-sm w-full flex flex-col ${
+          order.isArchived
+            ? "border-dashed border-zinc-300"
+            : "border-zinc-200"
+        }`}
         onClick={() => console.log(order)}
       >
-        <div className="flex justify-between items-center px-3">
-          <div className="text-xs rounded-full px-3 py-1 text-white bg-zinc-700 font-semibold">
-            {order.source}
+        <div className="flex justify-between items-center gap-3 px-4 pt-3 pb-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xs rounded-full px-2.5 py-0.5 text-white bg-zinc-800 font-medium truncate">
+              {order.source}
+            </span>
+            <span className="inline-flex items-center text-xs text-zinc-500 tabular-nums">
+              #{order.orderNumber}
+              <CopyButton value={order.orderNumber} label="Copy order number" />
+            </span>
           </div>
-          <div id="tags" className="flex gap-2 items-center">
+          <div id="tags" className="flex gap-1.5 items-center shrink-0">
+            {order.isArchived && (
+              <Tag className="bg-zinc-100 text-zinc-600 ring-zinc-300">
+                Archived
+              </Tag>
+            )}
             {order.deliveryStatus == "delivered" && (
-              <div className="bg-green-500 text-[8px] text-white px-2 py-px rounded-lg">
-                DELIVERED
-              </div>
+              <Tag className="bg-green-50 text-green-700 ring-green-600/30">
+                Delivered
+              </Tag>
+            )}
+            {order.deliveryStatus != "delivered" && order.isAssignedToAgent && (
+              <Tag className="bg-amber-50 text-amber-700 ring-amber-600/30">
+                Assigned
+              </Tag>
+            )}
+            {!order.isAssignedToAgent && order.isComfirmed && (
+              <Tag className="bg-blue-50 text-blue-700 ring-blue-600/30">
+                Confirmed
+              </Tag>
             )}
             {order.isNewOrder && (
-              <div className="bg-red-500 text-[8px] rotate-45 text-white px-2 py-px rounded-t-full">
-                NEW
-              </div>
+              <Tag className="bg-red-50 text-red-700 ring-red-600/30">New</Tag>
             )}
           </div>
         </div>
-        <div className="text-sm px-3">
-          <ShowOrderItem />
-          <ShowAmount />
-        </div>
-        <div className="flex justify-between gap-12 items-center px-3">
-          <div className="flex flex-col gap-3">
-            {order.books && (
-              <div className="flex gap-3 items-start text-sm">
-                <span className="whitespace-nowrap">
-                  Books:
-                </span>
-                <div className="text-sm flex flex-wrap gap-x-4 gap-y-2">
+        <div className="flex flex-col sm:flex-row justify-between gap-x-12 gap-y-4 px-4 pb-4">
+          <div className="flex flex-col gap-2 text-sm min-w-0 sm:flex-1">
+            <ShowOrderItem />
+            <ShowAmount />
+            {order.books && Object.keys(order.books).length > 0 && (
+              <div className="flex gap-3 items-start">
+                <span className="text-zinc-500 whitespace-nowrap">Books</span>
+                <div className="flex flex-wrap gap-1.5">
                   {Object.entries(order.books).map(([name, count]) => (
-                    <div key={name} className="flex gap-1 items-end">
-                      <span>{count}</span>
-                      <span className="font-bold text-xs">X</span>
-                      <span className="">{name}</span>
-                    </div>
+                    <span
+                      key={name}
+                      className="inline-flex gap-1 items-center rounded-md bg-zinc-100 px-1.5 py-0.5 text-xs"
+                    >
+                      <span className="font-semibold tabular-nums">
+                        {count}×
+                      </span>
+                      <span>{name}</span>
+                    </span>
                   ))}
                 </div>
               </div>
             )}
-            <div className="text-sm space-x-2">
-              <span>{"Agent: "}</span>
-              <span className="font-semibold">
-                {order.agentName ?? "-- not yet assigned --"}
+            <div className="flex items-center gap-2">
+              <span className="text-zinc-500">Agent</span>
+              <span
+                className={order.agentName ? "font-medium" : "text-zinc-400"}
+              >
+                {order.agentName ?? "Not yet assigned"}
               </span>
-              {(order.isComfirmed && order.canMutate) && (
-                <span>
-                  <ActionAssignAgent>
-                    <PenIcon className="size-3 text-green-500" />
-                  </ActionAssignAgent>
-                </span>
+              {(order.isComfirmed && order.canMutate && !order.isArchived) && (
+                <ActionAssignAgent>
+                  <PenIcon className="size-3 text-green-600" />
+                </ActionAssignAgent>
               )}
             </div>
-            {order.deliveryStatus === "delivered" && (
-              <div className="text-sm">
-                <span>{"Delivery Charge: "}</span>
-                <span className="font-semibold">
-                  {order.deliveryCost
-                    ? order.deliveryCost.asLocalCurrency()
+            <div className="flex flex-wrap gap-x-6 gap-y-1">
+              {order.deliveryStatus === "delivered" && (
+                <div>
+                  <span className="text-zinc-500">Delivery charge</span>{" "}
+                  <span className="font-medium tabular-nums">
+                    {order.deliveryCost
+                      ? order.deliveryCost.asLocalCurrency()
+                      : "--"}
+                  </span>
+                </div>
+              )}
+              <div>
+                <span className="text-zinc-500">Office charge</span>{" "}
+                <span className="font-medium tabular-nums">
+                  {order.officeCharge
+                    ? order.officeCharge.asLocalCurrency()
                     : "--"}
                 </span>
               </div>
-            )}
-            <div className="text-sm space-x-2">
-              <span>{"Office Charge: "}</span>
-              <span className="font-semibold">
-                {order.officeCharge
-                  ? order.officeCharge.asLocalCurrency()
-                  : "--"}
-              </span>
             </div>
           </div>
-          <div className="text-sm text-right flex flex-col items-end gap-1">
-            <div className="font-semibold">{order.customerName}</div>
-            <div className="flex items-center gap-3">
+          <div className="text-sm sm:text-right flex flex-col sm:items-end gap-1 min-w-0 sm:max-w-[45%]">
+            <div className="flex items-center sm:justify-end gap-1 font-semibold text-zinc-900">
+              <span className="truncate">
+                {order.customerName || "No name"}
+              </span>
+              <CopyButton value={order.customerName} label="Copy name" />
+            </div>
+            <div className="flex items-center sm:justify-end gap-1">
               <a
-                className="flex gap-2 w-fit items-center"
+                className="flex gap-1.5 w-fit items-center text-blue-600 hover:underline tabular-nums"
                 href={`tel:${order.phone}`}
               >
-                <PhoneIcon className="size-3 text-blue-500" />
-                <div>{order.phone}</div>
+                <PhoneIcon className="size-3" />
+                <span>{order.phone}</span>
               </a>
-              <button
-                className="px-1"
-                onClick={() => {
-                  navigator.clipboard.writeText(order.phone);
-                  alert("copied!!");
-                }}
-              >
-                <CopyIcon className="size-4" />
-              </button>
+              <CopyButton value={order.phone} label="Copy phone number" />
             </div>
-            <div className="font-bold">{order.email ?? "-- no email --"}</div>
+            <div
+              className={order.email
+                ? "text-zinc-700 break-all"
+                : "text-zinc-400"}
+            >
+              {order.email || "No email"}
+            </div>
             <ShowAddress />
-            <div className="text-xs">{order.date}</div>
+            <div className="text-xs text-zinc-400 mt-1">{order.date}</div>
           </div>
         </div>
         {order.deliveryStatus === "delivered" && order.deliveredOn && (
-          <div className="px-4 py-2 space-y-2 border-t text-sm">
+          <div className="px-4 py-3 flex flex-wrap gap-x-8 gap-y-1 border-t border-zinc-100 bg-zinc-50/60 text-sm rounded-b-xl">
             <div>
-              <span>Affiliate earning:</span>{" "}
-              <span className="font-semibold">
+              <span className="text-zinc-500">Affiliate earning</span>{" "}
+              <span className="font-semibold tabular-nums">
                 {order.affiliateEarning.asLocalCurrency()}
               </span>
             </div>
             <div>
-              <span>Agent earning:</span>{" "}
-              <span className="font-semibold">
+              <span className="text-zinc-500">Agent earning</span>{" "}
+              <span className="font-semibold tabular-nums">
                 {order.agentEarning.asLocalCurrency()}
               </span>
             </div>
-            <div className="text-xs font-semibold">
-              <span>
-                {"Delivered: "}
-              </span>{" "}
-              {order.deliveredOn.string}
+            <div className="text-xs text-zinc-500 self-center">
+              Delivered {order.deliveredOn.string}
             </div>
           </div>
         )}
-        {order.canMutate && (
-          <div className="flex justify-evenly">
+        {order.isArchived && (
+          <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-t border-zinc-100">
+            <span className="text-xs text-zinc-500">
+              Hidden from order lists and charts.
+            </span>
+            <div className="flex-1" />
+            <ActionUnarchive />
+          </div>
+        )}
+        {order.canMutate && !order.isArchived && (
+          <div className="flex flex-wrap gap-2 px-4 py-3 border-t border-zinc-100">
             {!order.isComfirmed && <ActionDelete />}
-            {!order.isComfirmed && <ActionConfirm />}
+            <ActionArchive />
+            <div className="flex-1" />
             <ActionUpdateBooks />
+            {!order.isComfirmed && <ActionConfirm />}
             {order.isComfirmed && !order.isAssignedToAgent && (
               <ActionAssignAgent />
             )}
@@ -172,8 +219,20 @@ export const OrderComponent = forwardRef(({ order }: { order: Order }, ref) => {
   );
 });
 
-const _class =
-  "cursor-pointer flex-1 text-center text-sm hover:bg-opacity-75 py-1 first:rounded-bl-lg last:rounded-br-lg";
+const Tag = (
+  { children, className }: { children: ReactElement; className: string },
+) => (
+  <span
+    className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-md ring-1 ring-inset ${className}`}
+  >
+    {children}
+  </span>
+);
+
+const _base =
+  "cursor-pointer inline-flex items-center gap-1.5 text-center text-xs font-medium rounded-lg px-3 py-1.5 transition-colors";
+const _class = `${_base} text-white`;
+const _outline = `${_base} border bg-white`;
 
 const ActionUpdateBooks = () => {
   const ref = useRipple<HTMLButtonElement>();
@@ -194,7 +253,7 @@ const ActionUpdateBooks = () => {
       {(order) => (
         <button
           ref={ref}
-          className={`${_class} text-white bg-blue-500`}
+          className={`${_class} bg-blue-600 hover:bg-blue-700`}
           onClick={() => {
             showAlertDialog({
               title: "Subject Combination",
@@ -215,6 +274,7 @@ const ActionUpdateBooks = () => {
                 const subs = multiSelectRef.current?.getItems();
                 if (!subs) return;
                 await order!.updateBookConfiguration(subs);
+                Toast.success("Books updated");
               },
             });
           }}
@@ -233,7 +293,7 @@ const ActionDelete = () => {
       {(order) => (
         <button
           ref={ref}
-          className={`${_class} text-white bg-red-500`}
+          className={`${_outline} border-red-200 text-red-600 hover:bg-red-50`}
           onClick={() =>
             showAlertDialog({
               title: "Delete Order",
@@ -248,11 +308,81 @@ const ActionDelete = () => {
                 </div>
               ),
               onContinue: async () => {
-                OrderService.instance.deleteOrder(order!);
+                await OrderService.instance.deleteOrder(order!);
+                refreshList();
               },
             })}
         >
           Delete
+        </button>
+      )}
+    </context.Consumer>
+  );
+};
+
+const ActionArchive = () => {
+  const ref = useRipple<HTMLButtonElement>();
+  return (
+    <context.Consumer>
+      {(order) => (
+        <button
+          ref={ref}
+          className={`${_outline} border-zinc-300 text-zinc-700 hover:bg-zinc-50`}
+          title="Hide this order (e.g. a duplicate) without deleting it"
+          onClick={() =>
+            showAlertDialog({
+              title: "Archive order?",
+              message: (
+                <div className="flex flex-col gap-2">
+                  <div>
+                    <span className="font-medium">{order!.customerName}</span>
+                    {" · "}
+                    {order!.phone}
+                  </div>
+                  <div>
+                    {order!.orderItem} · {order!.orderAmount.asLocalCurrency()}
+                  </div>
+                  <div className="text-zinc-500">
+                    It is hidden from the order lists and charts but kept on
+                    record. Find it again under the <b>Archived</b> filter.
+                  </div>
+                </div>
+              ),
+              onContinue: async () => {
+                await order!.archive();
+                Toast.success("Order archived");
+                refreshList();
+              },
+            })}
+        >
+          <ArchiveIcon className="size-3.5" />
+          Archive
+        </button>
+      )}
+    </context.Consumer>
+  );
+};
+
+const ActionUnarchive = () => {
+  const ref = useRipple<HTMLButtonElement>();
+  return (
+    <context.Consumer>
+      {(order) => (
+        <button
+          ref={ref}
+          className={`${_outline} border-zinc-300 text-zinc-700 hover:bg-zinc-50`}
+          onClick={async () => {
+            try {
+              await order!.unarchive();
+            } catch {
+              return; // save() has already said why
+            }
+            Toast.success("Order restored");
+            refreshList();
+          }}
+        >
+          <RestoreIcon className="size-3.5" />
+          Restore
         </button>
       )}
     </context.Consumer>
@@ -266,7 +396,7 @@ const ActionConfirm = () => {
       {(order) => (
         <button
           ref={ref}
-          className={`${_class} text-white bg-green-500`}
+          className={`${_class} bg-green-600 hover:bg-green-700`}
           onClick={() =>
             showAlertDialog({
               title: "Confirm Order",
@@ -282,7 +412,8 @@ const ActionConfirm = () => {
               ),
               onContinue: async () => {
                 await order!.confirmOrder();
-                Toast.success("Success");
+                Toast.success("Order confirmed");
+                refreshList();
               },
             })}
         >
@@ -301,7 +432,9 @@ const ActionAssignAgent = ({ children }: { children?: ReactElement }) => {
       {(order) => (
         <button
           ref={ref}
-          className={`${_class} ${children ? "" : "text-white bg-green-500"}`}
+          className={children
+            ? "p-1 rounded hover:bg-zinc-100"
+            : `${_class} bg-green-600 hover:bg-green-700`}
           onClick={() => {
             showAlertDialog({
               title: "Assign Agent",
@@ -310,13 +443,16 @@ const ActionAssignAgent = ({ children }: { children?: ReactElement }) => {
                   <SelectAgent defaultValue={order!.agent} ref={selectorRef} />
                 </div>
               ),
-              onContinue: () => {
+              onContinue: async () => {
                 const agent = selectorRef.current?.getSelected();
                 if (!agent) {
                   Toast.error("Please select an Agent to continue");
                   throw new Error("Agent not selected");
                 }
-                order!.assignAgent(agent);
+                await order!.assignAgent(agent);
+                Toast.success(`Assigned to ${agent.name}`);
+                // Assigning also confirms, so the order leaves UnConfirmed/UnAssigned.
+                refreshList();
               },
             });
           }}
@@ -329,18 +465,21 @@ const ActionAssignAgent = ({ children }: { children?: ReactElement }) => {
 };
 
 const ActionUpdateDeliveryStatus = () => {
-  const ref = useRef<{ onContinue: VoidFunction }>();
+  const ref = useRef<{ onContinue: () => Promise<void> }>();
 
   return (
     <context.Consumer>
       {(order) => (
         <button
-          className={`${_class} text-white bg-amber-800`}
+          className={`${_class} bg-amber-700 hover:bg-amber-800`}
           onClick={() => {
             showAlertDialog({
               title: "Update delivery status",
               message: <__UpdateDeliveryStatus ref={ref} order={order!} />,
-              onContinue: () => ref.current?.onContinue(),
+              onContinue: async () => {
+                await ref.current?.onContinue();
+                refreshList();
+              },
             });
           }}
         >
@@ -387,7 +526,7 @@ const __UpdateDeliveryStatus = forwardRef(
         if (books) {
           await order!.setBookConfiguration(books);
         }
-        order!.updateDelivery(status, amount);
+        await order!.updateDelivery(status, amount);
       },
     }));
 
@@ -557,9 +696,9 @@ const ShowOrderItem = () => {
   return (
     <context.Consumer>
       {(order) => (
-        <div className="flex gap-3 items-center">
-          <span>{order!.orderItem}</span>
-          {order?.canMutate && (
+        <div className="flex gap-2 items-center">
+          <span className="font-semibold text-zinc-900">{order!.orderItem}</span>
+          {order?.canMutate && !order.isArchived && (
             <button
               onClick={() => {
                 showAlertDialog({
@@ -572,15 +711,15 @@ const ShowOrderItem = () => {
                       />
                     </div>
                   ),
-                  onContinue: () => {
+                  onContinue: async () => {
                     const item = ref.current?.getItem();
                     if (!item) throw new Error();
-                    order?.updateOrderItem(item);
+                    await order?.updateOrderItem(item);
                   },
                 });
               }}
             >
-              <PenIcon className="size-3 text-green-500" />
+              <PenIcon className="size-3 text-green-600" />
             </button>
           )}
         </div>
@@ -596,17 +735,14 @@ const ShowAmount = () => {
     <context.Consumer>
       {(order) => (
         <Fragment>
-          <div className="flex gap-3 items-center">
+          <div className="flex gap-2 items-center">
             <div>
-              <span className="font-semibold">
-                Paid:
-              </span>
-              &nbsp;
-              <span>
+              <span className="text-zinc-500">Paid</span>{" "}
+              <span className="font-medium tabular-nums">
                 {order!.orderAmount.asLocalCurrency()}
               </span>
             </div>
-            {order?.canMutate && (
+            {order?.canMutate && !order.isArchived && (
               <button
                 onClick={() => {
                   showAlertDialog({
@@ -620,30 +756,27 @@ const ShowAmount = () => {
                         />
                       </div>
                     ),
-                    onContinue: () => {
+                    onContinue: async () => {
                       const amount = parseInt(ref.current?.value ?? "");
                       if (isNaN(amount)) throw new Error();
 
-                      order?.updateAmount(amount);
+                      await order?.updateAmount(amount);
                     },
                   });
                 }}
               >
-                <PenIcon className="size-3 text-green-500" />
+                <PenIcon className="size-3 text-green-600" />
               </button>
             )}
           </div>
-          <div className="mt-4">
-            <span className="font-semibold">
-              Cost:
-            </span>
-            &nbsp;
-            <span>
+          <div>
+            <span className="text-zinc-500">Cost</span>{" "}
+            <span className="font-medium tabular-nums">
               {order!.actualCost.asLocalCurrency()}
             </span>
           </div>
           {order!.actualCost > order!.orderAmount && (
-            <div className="flex items-center gap-1 py-3 text-red-500 text-xs">
+            <div className="flex items-center gap-1 text-red-600 text-xs">
               <InfoIcon className="size-3" />
               <span className="font-semibold">
                 {order!.actualCost.asLocalCurrency()}
@@ -668,8 +801,8 @@ const ShowAddress = () => {
     <context.Consumer>
       {(order) => (
         <Fragment>
-          <div className="flex gap-3 items-center">
-            {order?.canMutate && (
+          <div className="flex gap-2 items-center sm:justify-end">
+            {order?.canMutate && !order.isArchived && (
               <button
                 onClick={() => {
                   showAlertDialog({
@@ -686,8 +819,8 @@ const ShowAddress = () => {
                         />
                       </div>
                     ),
-                    onContinue: () => {
-                      order?.updateAddress({
+                    onContinue: async () => {
+                      await order?.updateAddress({
                         state: stateRef.current!.getSelection(),
                         address: inputRef.current!.value,
                       });
@@ -695,12 +828,12 @@ const ShowAddress = () => {
                   });
                 }}
               >
-                <PenIcon className="size-3 text-green-500" />
+                <PenIcon className="size-3 text-green-600" />
               </button>
             )}
-            <div className="font-bold">{order!.state}</div>
+            <div className="font-medium text-zinc-900">{order!.state}</div>
           </div>
-          <div>{order!.address}</div>
+          <div className="text-zinc-600">{order!.address}</div>
         </Fragment>
       )}
     </context.Consumer>

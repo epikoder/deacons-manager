@@ -27,10 +27,15 @@ abstract class Observer {
 const useObserver = (observable: Observer) => {
     const [_, setState] = useState(0);
     useEffect(() => {
-        observable.subscribe(() => {
-            setState((prev) => prev += 1);
-        });
-        setTimeout(() => setState((prev) => prev + 1), 200);
-    }, []);
+        // Unsubscribe on unmount: list rows remount on every refresh, and each mount
+        // used to leave one more listener behind on the model.
+        const onChange = () => setState((prev) => prev + 1);
+        observable.subscribe(onChange);
+        const timer = setTimeout(onChange, 200);
+        return () => {
+            observable.unsubscribe(onChange);
+            clearTimeout(timer);
+        };
+    }, [observable]);
 };
 export { Observer, useObserver };

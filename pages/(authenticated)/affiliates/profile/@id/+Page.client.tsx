@@ -1,6 +1,7 @@
 import { useData } from "vike-react/useData";
+import CopyButton from "../../../../../src/components/CopyButton";
 import { useObserver } from "../../../../../@types/observable";
-import { CopyIcon, PhoneIcon } from "../../../../../src/components/Icons";
+import { PhoneIcon } from "../../../../../src/components/Icons";
 import { useEffect, useRef, useState } from "react";
 import { Bar } from "react-chartjs-2";
 import "chart.js/auto";
@@ -87,9 +88,12 @@ export default function () {
 
   return (
     <div className="overflow-y-scroll flex flex-col gap-4 h-full p-4">
-      <div className="p-4 shadow-md rounded-lg flex flex-col gap-3">
+      <div className="p-4 rounded-xl border border-zinc-200 bg-white shadow-sm flex flex-col gap-3">
         <div className="flex justify-between">
-          <div className="font-semibold text-2xl">{affiliate.name}</div>
+          <div className="flex items-center gap-1 font-semibold text-2xl">
+            {affiliate.name}
+            <CopyButton value={affiliate.name} label="Copy name" />
+          </div>
           <div className="flex flex-col items-end">
             <div className="flex items-center gap-3">
               <a
@@ -99,15 +103,7 @@ export default function () {
                 <PhoneIcon className="size-3 text-blue-500" />
                 <div>{affiliate.phone}</div>
               </a>
-              <button
-                className="px-1"
-                onClick={() => {
-                  navigator.clipboard.writeText(affiliate.phone);
-                  alert("copied!!");
-                }}
-              >
-                <CopyIcon className="size-4" />
-              </button>
+              <CopyButton value={affiliate.phone} label="Copy phone number" />
             </div>
             <div className="font-semibold">{affiliate.email}</div>
           </div>
@@ -116,7 +112,7 @@ export default function () {
       </div>
 
       <div className="flex flex-col gap-8">
-        <div className="shadow-md rounded-lg px-4">
+        <div className="rounded-xl border border-zinc-200 bg-white shadow-sm px-4">
           <div className="flex justify-end text-sm">
             <SelectMonth
               defaultValue={month}
@@ -175,7 +171,7 @@ export default function () {
           />
         </div>
 
-        <div className="shadow-md rounded-lg px-4">
+        <div className="rounded-xl border border-zinc-200 bg-white shadow-sm px-4">
           <div className="flex justify-end text-sm">
             <select
               defaultValue={year}

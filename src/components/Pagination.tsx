@@ -43,15 +43,15 @@ export default function Pagination({
     return page - mid - 2 == index || page + mid == index ? (
       <div
         key={`dot-${index}`}
-        className="whitespace-nowrap cursor-not-allowed"
+        className="whitespace-nowrap px-1 text-zinc-400 select-none"
       >
-        {". . ."}
+        {"…"}
       </div>
     ) : undefined;
   };
 
   return (
-    <div className="flex justify-center gap-1 items-center py-1">
+    <div className="flex flex-wrap justify-center gap-1 items-center py-1">
       <PrevButton
         disabled={page == 1}
         onClick={() => onNavigate(page - skipCount <= 0 ? 1 : page - skipCount)}
@@ -71,6 +71,13 @@ export default function Pagination({
   );
 }
 
+const navClass = (disabled?: boolean) =>
+  `mx-2 inline-flex items-center justify-center h-8 min-w-8 px-2 rounded-lg border text-sm transition-colors ${
+    disabled
+      ? "border-zinc-200 text-zinc-300 cursor-not-allowed"
+      : "border-zinc-300 text-zinc-700 bg-white hover:bg-zinc-50"
+  }`;
+
 const PrevButton = ({
   onClick,
   disabled,
@@ -79,9 +86,8 @@ const PrevButton = ({
   disabled?: boolean;
 }) => (
   <button
-    className={`mx-3 py-1 px-2 text-sm rounded-sm first:rounded-l-md first:border-l-0 last:rounded-r-md last:border-r-0 hover:bg-opacity-75 ${
-      disabled ? "bg-slate-300 text-white cursor-not-allowed" : "bg-slate-300"
-    } min-w-8`}
+    aria-label="Previous pages"
+    className={navClass(disabled)}
     onClick={!disabled ? onClick : undefined}
   >
     <ChevronDoubleBackward className="size-4" />
@@ -96,9 +102,8 @@ const FowardButton = ({
   disabled?: boolean;
 }) => (
   <button
-    className={`mx-3 py-1 px-2 text-xs rounded-sm first:rounded-l-md first:border-l-0 last:rounded-r-md last:border-r-0 hover:bg-opacity-75 ${
-      disabled ? "bg-slate-300 text-white cursor-not-allowed" : "bg-slate-300"
-    } min-w-8`}
+    aria-label="Next pages"
+    className={navClass(disabled)}
     onClick={!disabled ? onClick : undefined}
   >
     <ChevronDoubleForward className="size-4" />
@@ -115,9 +120,12 @@ const NavigateButton = ({
   page: number;
 }) => (
   <button
-    className={`py-1 px-2 text-xs rounded-sm first:rounded-l-md first:border-l-0 last:rounded-r-md last:border-r-0 hover:bg-opacity-75 ${
-      page == current ? "bg-slate-500 text-white" : "bg-slate-300"
-    } min-w-8`}
+    aria-current={page == current ? "page" : undefined}
+    className={`h-8 min-w-8 px-2 rounded-lg text-xs font-medium tabular-nums transition-colors ${
+      page == current
+        ? "bg-zinc-900 text-white"
+        : "text-zinc-600 hover:bg-zinc-100"
+    }`}
     onClick={onClick}
   >
     {page}

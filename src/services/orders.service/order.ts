@@ -1,10 +1,11 @@
 import { Observer } from "../../../@types/observable";
 import Carbon from "../../utils/carbon";
 import { postgrest, WithAuth } from "../../utils/postgrest";
+import Toast from "../../utils/toast";
 import AgentService, { Agent } from "../agents.service";
 import OrderService from "./orders.service";
 
-const OFFICE_CHARGE = .1; // 10%
+export const OFFICE_CHARGE = .1; // 10%
 
 export enum OrderItem {
   none = "None",
@@ -48,7 +49,7 @@ export default class Order extends Observer {
     order.assigned_on && (this._assigned_on = new Carbon(order.assigned_on));
 
     if (!this._inner._id) {
-      this.update();
+      this.save(true).catch(() => {});
     }
   }
 
@@ -109,6 +110,15 @@ export default class Order extends Observer {
     return this._confirmed_on != undefined;
   }
 
+  /** The order number on the affiliate site it came from. */
+  get orderNumber() {
+    return String(this._inner.id);
+  }
+
+  get isArchived() {
+    return !!this._inner.archived_on;
+  }
+
   get isAssignedToAgent() {
     return this._inner.agent_id != undefined;
   }
@@ -132,7 +142,8 @@ export default class Order extends Observer {
     if (!this._inner.delivered_on && this.deliveryStatus == "delivered") {
       delivered_on = new Carbon();
       this._inner.delivered_on = delivered_on.localISO();
-      this.update();
+      // Runs during render, so a failure must not surface as a toast on every paint.
+      this.save(true).catch(() => {});
     }
     return delivered_on;
   }
@@ -217,22 +228,44 @@ export default class Order extends Observer {
   }
 
   async assignAgent(agent: Agent) {
-    this._inner.agent_id = agent.ID;
-    this._inner.assigned_on = new Carbon().localISO();
-    this._agent = agent;
-    this.update();
+    await this.mutate(() => {
+      const now = new Carbon();
+      this._inner.agent_id = agent.ID;
+      this._inner.assigned_on = now.localISO();
+      this._agent = agent;
+      // Handing an order to an agent confirms it. The database enforces the same rule
+      // (confirm_orders_on_assign), this just keeps the card in step without a refetch.
+      if (!this._confirmed_on) {
+        this._confirmed_on = now;
+        this._inner.confirmed_on = now.localISO();
+      }
+    });
   }
 
   async unAssignAgent() {
-    this._inner.agent_id = undefined;
-    this._agent = undefined;
-    this.update();
+    await this.mutate(() => {
+      this._inner.agent_id = undefined;
+      this._agent = undefined;
+    });
   }
 
   async updateAddress(info: { state: string; address: string }) {
-    this._inner.address = info.address;
-    this._inner.state = info.state;
-    this.update();
+    await this.mutate(() => {
+      this._inner.address = info.address;
+      this._inner.state = info.state;
+    });
+  }
+
+  async archive() {
+    await this.mutate(() => {
+      this._inner.archived_on = new Carbon().localISO();
+    });
+  }
+
+  async unarchive() {
+    await this.mutate(() => {
+      this._inner.archived_on = null;
+    });
   }
 
   async destroy() {
@@ -245,9 +278,10 @@ export default class Order extends Observer {
   }
 
   async confirmOrder() {
-    this._confirmed_on = new Carbon();
-    this._inner.confirmed_on = this._confirmed_on.localISO();
-    this.update();
+    await this.mutate(() => {
+      this._confirmed_on = new Carbon();
+      this._inner.confirmed_on = this._confirmed_on.localISO();
+    });
   }
 
   async unConfirmOrder() {}
@@ -279,19 +313,22 @@ export default class Order extends Observer {
   }
 
   async updateOfficeCharge(amount: number) {
-    this._inner.office_charge = amount;
-    this.update();
+    await this.mutate(() => {
+      this._inner.office_charge = amount;
+    });
   }
 
   async updateOrderItem(item: OrderItem) {
-    this._inner.item = item;
-    this.update();
+    await this.mutate(() => {
+      this._inner.item = item;
+    });
   }
 
   async updateAmount(amount: number) {
-    this._inner.order_amount = amount;
-    this._inner.office_charge = amount * OFFICE_CHARGE;
-    this.update();
+    await this.mutate(() => {
+      this._inner.order_amount = amount;
+      this._inner.office_charge = amount * OFFICE_CHARGE;
+    });
   }
 
   async setBookConfiguration(subs: BookConfig) {
@@ -299,15 +336,53 @@ export default class Order extends Observer {
   }
 
   async updateBookConfiguration(subs: BookConfig) {
-    this._inner.books = subs;
-    this.update();
+    await this.mutate(() => {
+      this._inner.books = subs;
+    });
+  }
+
+  /**
+   * Apply a change locally and persist it. If the write is rejected the order goes
+   * back to what the database still holds, rather than showing a card that looks
+   * confirmed (or assigned, or archived) and reverts on the next reload.
+   */
+  private async mutate(change: VoidFunction) {
+    const inner = { ...this._inner };
+    const confirmedOn = this._confirmed_on;
+    const agent = this._agent;
+    change();
+    try {
+      await this.update();
+    } catch (error) {
+      this._inner = inner;
+      this._confirmed_on = confirmedOn;
+      this._agent = agent;
+      this.notifySubscribers();
+      throw error;
+    }
   }
 
   async update() {
-    const { data } = await new WithAuth(
-      postgrest.from("orders").upsert(this._inner).select("id").single(),
+    await this.save(false);
+  }
+
+  private async save(silent: boolean) {
+    // phone_digits is GENERATED ALWAYS: Postgres rejects any row that carries it
+    // (428C9), and it comes back on every select("*"). Sending it made every edit -
+    // confirm, assign, books - fail, silently, so the UI and the database disagreed.
+    const { phone_digits: _generated, ...row } = this._inner;
+    const { data, error } = await new WithAuth(
+      postgrest.from("orders").upsert(row).select("_id").single(),
     ).unwrap();
-    !this.ID && (this._inner._id = data?.id);
+    if (error) {
+      console.error("order save failed", error, row);
+      if (!silent) {
+        Toast.error(`Couldn't save order: ${escapeHtml(error.message ?? "")}`);
+      }
+      throw error;
+    }
+    // This used to select "id" - the affiliate's order number - into _id, the uuid.
+    !this.ID && (this._inner._id = (data as { _id?: string } | null)?._id);
     this.notifySubscribers();
   }
 
@@ -326,3 +401,6 @@ export default class Order extends Observer {
     }, new Carbon());
   }
 }
+
+const escapeHtml = (s: string) =>
+  String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);

@@ -1,10 +1,10 @@
 import { useData } from "vike-react/useData";
+import CopyButton from "../../../../../src/components/CopyButton";
 import { Agent } from "../../../../../src/services/agents.service";
 import { useObserver } from "../../../../../@types/observable";
 import {
   ChevronDown,
   ChevronUp,
-  CopyIcon,
   PhoneIcon,
 } from "../../../../../src/components/Icons";
 import { Fragment, useEffect, useRef, useState } from "react";
@@ -96,9 +96,12 @@ export default function () {
 
   return (
     <div className="overflow-y-scroll flex flex-col gap-4 h-full p-4">
-      <div className="p-4 shadow-md rounded-lg flex flex-col gap-3">
+      <div className="p-4 rounded-xl border border-zinc-200 bg-white shadow-sm flex flex-col gap-3">
         <div className="flex justify-between">
-          <div className="font-semibold text-2xl">{agent.name}</div>
+          <div className="flex items-center gap-1 font-semibold text-2xl">
+            {agent.name}
+            <CopyButton value={agent.name} label="Copy name" />
+          </div>
           <div className="flex flex-col items-end">
             <div className="flex items-center gap-3">
               <a
@@ -108,15 +111,7 @@ export default function () {
                 <PhoneIcon className="size-3 text-blue-500" />
                 <div>{agent.phone}</div>
               </a>
-              <button
-                className="px-1"
-                onClick={() => {
-                  navigator.clipboard.writeText(agent.phone);
-                  alert("copied!!");
-                }}
-              >
-                <CopyIcon className="size-4" />
-              </button>
+              <CopyButton value={agent.phone} label="Copy phone number" />
             </div>
             <div className="font-semibold">{agent.state}</div>
           </div>
@@ -138,11 +133,11 @@ export default function () {
         </div>
       </div>
 
-      <div className="rounded-lg p-3 shadow-md">
+      <div className="rounded-xl border border-zinc-200 bg-white shadow-sm p-3">
         <RecentOrders id={agent.ID} />
       </div>
 
-      <div className="flex flex-col gap-3 p-4 shadow-md rounded-lg">
+      <div className="flex flex-col gap-3 p-4 rounded-xl border border-zinc-200 bg-white shadow-sm">
         <div className="font-semibold">Books currently holding</div>
         <div className="flex flex-wrap gap-4">
           {Object.entries(agent.books)
@@ -163,7 +158,7 @@ export default function () {
         <AssignAgentBooks agent={agent} />
       </div>
       <div className="flex flex-col gap-8">
-        <div className="shadow-md rounded-lg px-4">
+        <div className="rounded-xl border border-zinc-200 bg-white shadow-sm px-4">
           <div className="flex justify-end text-sm">
             <SelectMonth
               defaultValue={month}
@@ -221,7 +216,7 @@ export default function () {
             }}
           />
         </div>
-        <div className="shadow-md rounded-lg px-4">
+        <div className="rounded-xl border border-zinc-200 bg-white shadow-sm px-4">
           <div className="flex justify-end text-sm">
             <select
               defaultValue={year}

@@ -9,6 +9,14 @@ import { usePageContext } from "vike-react/usePageContext";
 import Badge from "../../src/components/Badge";
 import Carbon from "../../src/utils/carbon";
 import Logo from "../../src/components/Logo";
+import {
+	AffiliatesIcon,
+	AgentsIcon,
+	HomeIcon,
+	OrdersIcon,
+	SettingsIcon,
+	UsersIcon,
+} from "../../src/components/Icons";
 
 export default function ({ children }: { children: React.ReactNode }) {
 	const context = usePageContext();
@@ -121,19 +129,21 @@ export default function ({ children }: { children: React.ReactNode }) {
 	}, []);
 
 	return (
-		<div className="flex max-w-screen-xl mx-auto w-screen h-screen overflow-hidden">
+		<div className="flex max-w-screen-xl mx-auto w-screen h-screen overflow-hidden bg-zinc-50 border-x border-zinc-200">
 			<Sidebar>
 				<Logo />
-				<Link href="/">Dashboard</Link>
+				<Link href="/" icon={<HomeIcon />}>Dashboard</Link>
 				<Badge subscriber={OrderService.instance.notification}>
-					<Link href="/orders">Orders</Link>
+					<Link href="/orders" icon={<OrdersIcon />}>Orders</Link>
 				</Badge>
-				<Link href="/affiliates">Affiliates</Link>
-				<Link href="/agents">Agents</Link>
+				<Link href="/affiliates" icon={<AffiliatesIcon />}>Affiliates</Link>
+				<Link href="/agents" icon={<AgentsIcon />}>Agents</Link>
 				{context.config.user!.role === "admin" && (
-					<Link href="/users">Users</Link>
+					<Link href="/users" icon={<UsersIcon />}>Users</Link>
 				)}
-				<Link href="/settings">Settings</Link>
+				<div className="mt-auto pt-4 border-t border-zinc-100">
+					<Link href="/settings" icon={<SettingsIcon />}>Settings</Link>
+				</div>
 			</Sidebar>
 			<Content>{context.config.bookCost && children}</Content>
 		</div>
@@ -142,16 +152,12 @@ export default function ({ children }: { children: React.ReactNode }) {
 
 function Sidebar({ children }: { children: React.ReactNode }) {
 	return (
-		<div
+		<nav
 			id="sidebar"
-			className="p-5 flex flex-col gap-2 flex-shrink-0"
-			style={{
-				lineHeight: "1.8em",
-				borderRight: "2px solid #eee",
-			}}
+			className="w-52 px-3 pb-4 flex flex-col gap-1 flex-shrink-0 bg-white border-r border-zinc-200"
 		>
 			{children}
-		</div>
+		</nav>
 	);
 }
 

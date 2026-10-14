@@ -36,12 +36,12 @@ export const showAlertDialog = ({
     <Dialog closeFn={closeFn}>
       {({ closeFn }) => (
         <Fragment>
-          <div className={"px-4 py-2 font-semibold"}>{title}</div>
-          <div className={"px-4 py-2 text-sm overflow-y-scroll h-full max-h-[80vh]"}>{message}</div>
-          <div className={"grid grid-cols-2 text-sm"}>
+          <div className={"px-5 pt-4 pb-2 font-semibold"}>{title}</div>
+          <div className={"px-5 py-2 text-sm overflow-y-auto h-full max-h-[80vh]"}>{message}</div>
+          <div className={"flex justify-end gap-2 px-5 pb-4 pt-3 text-sm"}>
             <button
               className={
-                "text-center py-1 bg-red-500 text-white w-full rounded-bl-lg"
+                "px-4 py-1.5 rounded-lg border border-zinc-300 text-zinc-700 hover:bg-zinc-50"
               }
               onClick={() => {
                 onCancel && onCancel();
@@ -52,7 +52,7 @@ export const showAlertDialog = ({
             </button>
             <button
               className={
-                "text-center py-1 bg-green-500 text-white w-full rounded-br-lg"
+                "px-4 py-1.5 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700"
               }
               onClick={async () => {
                 try {
@@ -101,7 +101,7 @@ export default function Dialog({
     <div
       ref={__container_ref}
       className={
-        "fixed z-[99] inset-0 w-[100vw] h-[100vh] bg-gray-400 bg-opacity-40 backdrop-blur-[2px] flex flex-col justify-center items-center"
+        "fixed z-[99] inset-0 w-[100vw] h-[100vh] bg-zinc-900/30 backdrop-blur-[2px] flex flex-col justify-center items-center p-4"
       }
       onClick={(ev) => {
         ev.stopPropagation();
@@ -116,7 +116,7 @@ export default function Dialog({
       >
         <div
           ref={__ref}
-          className={"rounded-lg shadow-md bg-white bg-opacity-100 w-full"}
+          className={"rounded-xl shadow-xl ring-1 ring-black/5 bg-white bg-opacity-100 w-full"}
         >
           {children}
         </div>

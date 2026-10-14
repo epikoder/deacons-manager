@@ -1,12 +1,29 @@
 import { SubscriberProvider } from "../../../@types/subscribers";
 import Bucket from "../../utils/bucket";
 import Carbon from "../../utils/carbon";
+import { PG_UNAUTHORIZED } from "../../utils/constants";
 import { normalizePhoneQuery } from "../../utils/phone";
 import { postgrest, WithAuth } from "../../utils/postgrest";
-import Order, { OrderItem } from "./order";
+import Toast from "../../utils/toast";
+import Order, { OFFICE_CHARGE, OrderItem } from "./order";
 
 type AwaitedOrderWithSource = Promise<IOrder[]>;
 type SourceTimeStamp = Record<string, Carbon>;
+export type SortDirection = "asc" | "desc";
+export type FetchOrdersParam = Omit<SearchParam, "offset"> & {
+  confirmed?: boolean;
+  assigned?: boolean;
+  delivery_status?: DeliveryStatus;
+  source?: string[];
+  category?: string[];
+  agent_id?: string;
+  phone?: string;
+  search?: string;
+  /** false (the default) hides archived orders, true shows only them. */
+  archived?: boolean;
+  /** By created_at, or delivered_on when filtering on delivered. */
+  sort?: SortDirection;
+};
 
 const defaulSearchParam: Readonly<SearchParam> = {
   limit: 50,
@@ -173,15 +190,45 @@ export default class OrderService extends SubscriberProvider<Order[]> {
 
     const res = await Promise.all(promises);
 
+    let inserted = 0;
     for (const orders of res) {
       const o = orders.at(0);
       if (!o) continue;
-      const timestamp = this.lastRefreshTimeStamp[sourceAsID(o.source)];
-      this.updateOrders(orders, timestamp);
-      this.notification.notify();
+      inserted += await this.saveSourceOrders(orders);
       this.lastRefreshTimeStamp[sourceAsID(o.source)] = new Carbon();
     }
     this.updateLastTimeStamp();
+    if (inserted > 0) {
+      this.notification.notify();
+      // New orders used to be pushed straight into whatever list was on screen, so a
+      // search or a filtered page grew rows that did not match it. Re-run the query
+      // that is showing instead; the database decides what belongs.
+      this.refresh();
+    }
+  }
+
+  /**
+   * One insert per source rather than one upsert per order. The pull window overlaps
+   * the previous one, so most rows already exist: those are skipped, which also keeps
+   * a re-pull from touching an order an admin has since confirmed or archived.
+   */
+  private async saveSourceOrders(orders: IOrder[]): Promise<number> {
+    const rows = orders.map((o) => ({
+      ...o,
+      delivery_status: o.delivery_status ?? "pending",
+      office_charge: o.office_charge ?? o.order_amount * OFFICE_CHARGE,
+    }));
+    const { data, error } = await new WithAuth(
+      postgrest
+        .from("orders")
+        .upsert(rows, { onConflict: "source,id", ignoreDuplicates: true })
+        .select("_id"),
+    ).unwrap();
+    if (error) {
+      console.error(`saving ${orders[0]?.source} orders failed`, error);
+      return 0;
+    }
+    return (data as unknown[] | null)?.length ?? 0;
   }
 
   public registerSource(
@@ -203,28 +250,57 @@ export default class OrderService extends SubscriberProvider<Order[]> {
   }
 
   _abortController: AbortController | undefined;
+  private _lastFetch?: { page: number; param: FetchOrdersParam };
+
+  /**
+   * Re-run whatever query is on screen, without the full-page spinner. Called after a
+   * confirm / assign / archive so the row leaves a list it no longer matches, the
+   * totals and pages are recounted, and the next order moves up into the gap.
+   */
+  public refresh() {
+    if (!this._lastFetch) return Promise.resolve();
+    return this.fetchOrders(this._lastFetch.page, this._lastFetch.param, {
+      silent: true,
+    });
+  }
+
   public async fetchOrders(
     page = 1,
-    param = {
+    param: FetchOrdersParam = {
       limit: 50,
-    } as Omit<SearchParam, "offset"> & {
-      confirmed?: boolean;
-      assigned?: boolean;
-      delivery_status?: DeliveryStatus;
-      source?: string[];
-      category?: string[];
-      agent_id?: string;
-      phone?: string;
-      search?: string;
     },
+    { silent = false }: { silent?: boolean } = {},
   ) {
-    this._loading = true;
+    this._lastFetch = { page, param };
+    // A silent refresh keeps the current rows up until the new ones arrive (and leaves
+    // a spinner that is already showing for a fetch it supersedes).
+    if (!silent) this._loading = true;
     if (this._abortController) {
       this._abortController.abort();
     }
     this._abortController = new AbortController();
+    const signal = this._abortController.signal;
 
     this.notifySubscribers(this.orders);
+
+    try {
+      await this.queryOrders(page, param, signal);
+    } catch (error) {
+      // Anything thrown used to leave _loading set for good: the spinner never cleared
+      // and nothing said why.
+      if (signal.aborted) return;
+      console.error("orders query failed", error);
+      Toast.error("Couldn't load orders. Check your connection and try again.");
+      this._loading = false;
+      this.notifySubscribers(this.orders);
+    }
+  }
+
+  private async queryOrders(
+    page: number,
+    param: FetchOrdersParam,
+    signal: AbortSignal,
+  ) {
 
     // range() is inclusive on both ends. The page size used to be a hardcoded 50 for
     // the offset but param.limit for the end, so page 1 held 50 rows, page 2 asked for
@@ -233,13 +309,19 @@ export default class OrderService extends SubscriberProvider<Order[]> {
     const limit = param.limit > 0 ? param.limit : 50;
     const offset = (Math.max(page, 1) - 1) * limit;
 
+    const ascending = param.sort === "asc";
     let query = postgrest
       .from("orders")
-      .select(`*,agents(*)`, { count: "exact" })
-      .order("created_at", {
-        ascending: false,
-      })
-      .range(offset, offset + limit - 1);
+      .select(`*,agents(*)`, { count: "exact" });
+    query = param.delivery_status === "delivered"
+      ? query.order("delivered_on", { ascending, nullsFirst: false })
+      : query.order("created_at", { ascending });
+    // A tiebreaker, or rows sharing a timestamp can swap between pages.
+    query = query.order("_id", { ascending }).range(offset, offset + limit - 1);
+
+    query = param.archived
+      ? query.not("archived_on", "is", null)
+      : query.is("archived_on", null);
     if (param.start_date) {
       query = query.gte("created_at", param.start_date);
     }
@@ -283,23 +365,38 @@ export default class OrderService extends SubscriberProvider<Order[]> {
     if (param.search) {
       const raw = param.search.trim();
       // These characters are part of PostgREST's or() grammar; leaving them in a value
-      // produces a malformed filter rather than an empty result.
-      const text = raw.replace(/[(),"\\*]/g, " ").trim();
+      // produces a malformed filter rather than an empty result. Values are also
+      // double-quoted below, so a name with a space or a full stop stays one value.
+      const text = raw.replace(/[(),"\\*]/g, " ").replace(/\s+/g, " ").trim();
       const digits = normalizePhoneQuery(raw);
       const clauses: string[] = [];
       // Three digits is where a phone match stops being every row in the table.
-      if (digits.length >= 3) clauses.push(`phone_digits.like.*${digits}*`);
-      if (text.length >= 2) clauses.push(`fullname.ilike.*${text}*`);
+      if (digits.length >= 3) clauses.push(`phone_digits.like."*${digits}*"`);
+      if (text.length >= 2) clauses.push(`fullname.ilike."*${text}*"`);
+      // Order numbers are short ("482"), so match them exactly from one character up,
+      // and as a substring once there is enough to be selective.
+      if (text.length >= 1) {
+        clauses.push(
+          text.length >= 3 ? `id.ilike."*${text}*"` : `id.eq."${text}"`,
+        );
+      }
       if (clauses.length > 0) query = query.or(clauses.join(","));
     }
 
-    const signal = this._abortController.signal;
-    const { data, count } = await new WithAuth(query.abortSignal(signal))
+    const { data, count, error } = await new WithAuth(query.abortSignal(signal))
       .unwrap();
     // postgrest-js resolves an aborted request with data: null rather than throwing.
     // A newer fetch owns the list by then, so this one must not clear it or touch the
     // loading flag - and updateOrders(null) would throw on .reverse().
     if (signal.aborted) return;
+    // A rejected query used to look exactly like "no matches". That is how a missing
+    // phone_digits column on production hid for days: every phone search came back
+    // empty with nothing to say why. An expired session is handled by WithAuth.
+    if (error && error.code != PG_UNAUTHORIZED) {
+      console.error("orders query failed", error);
+      const why = String(error.message ?? "").replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+      Toast.error(`Couldn't load orders: ${why}`);
+    }
     this._totalOrders = count ?? 0;
     this._loading = false;
     this._orders.clear();

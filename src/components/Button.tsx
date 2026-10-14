@@ -19,7 +19,7 @@ export default function Button({
     <button
       ref={ref}
       {...props}
-      className={`rounded-md text-white px-8 py-1 text-sm ${disabled ? "bg-gray-300 cursor-none" : ""} ${className ?? ""}`}
+      className={`rounded-lg text-white px-5 py-1.5 text-sm font-medium shadow-sm transition-opacity hover:opacity-90 ${disabled ? "!bg-zinc-300 cursor-not-allowed" : ""} ${className ?? ""}`}
       disabled={disabled}
     >
       {children ?? title}

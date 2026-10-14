@@ -1,7 +1,8 @@
 import { useObserver } from "../../@types/observable";
+import CopyButton from "./CopyButton";
 import { Affiliate } from "../services/affiliate.service";
 import Carbon from "../utils/carbon";
-import { CopyIcon, PhoneIcon } from "./Icons";
+import { PhoneIcon } from "./Icons";
 
 export default function AffiliateComponent({
   affiliate,
@@ -13,11 +14,14 @@ export default function AffiliateComponent({
   return (
     <div
       onClick={() => console.log(affiliate)}
-      className="rounded-lg shadow-md"
+      className="rounded-xl border border-zinc-200 bg-white shadow-sm"
     >
       <div className="p-4 flex gap-8 justify-between">
         <div>
-          <div>{affiliate.name}</div>
+          <div className="flex items-center gap-1 font-semibold">
+            {affiliate.name}
+            <CopyButton value={affiliate.name} label="Copy name" />
+          </div>
           <div className="text-zinc-600">
             <span className="font-semibold text-2xl">
               {Intl.NumberFormat().format(affiliate.totalOrderForCurrentCycle)}
@@ -40,15 +44,7 @@ export default function AffiliateComponent({
               <PhoneIcon className="size-3 text-blue-500" />
               <div>{affiliate.phone}</div>
             </a>
-            <button
-              className="px-1"
-              onClick={() => {
-                navigator.clipboard.writeText(affiliate.phone);
-                alert("copied!!");
-              }}
-            >
-              <CopyIcon className="size-4" />
-            </button>
+            <CopyButton value={affiliate.phone} label="Copy phone number" />
           </div>
           <div className="font-bold">{affiliate.email}</div>
         </div>
