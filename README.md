@@ -1,72 +1,167 @@
-<!--bati:start section="document"-->
+# Deacons Manager
 
-<!--bati:start section="intro"-->
+Admin dashboard for Deacon's Publishers. It pulls book orders from the affiliate
+sites, and the office uses it to confirm them, assign them to delivery agents, track
+delivery, and report earnings for affiliates and agents.
 
-Generated with [Bati](https://batijs.dev) ([version 295](https://www.npmjs.com/package/create-bati/v/0.0.295)) using this command:
-
-```sh
-bun create bati --react
-```
-
-<!--bati:start section="TOC"-->
+Built with [Vike](https://vike.dev) + React + Tailwind on the front end, and
+[PostgREST](https://postgrest.org) over PostgreSQL as the API. There is no separate
+application server: the browser talks to PostgREST directly, and the rules that must
+hold for every client (phone normalisation, "assigned implies confirmed", access
+scopes) live in the database.
 
 ## Contents
 
-* [React](#react)
+- [How it fits together](#how-it-fits-together)
+- [Local development](#local-development)
+- [Migrations](#migrations)
+- [Orders](#orders)
+- [Dashboard](#dashboard)
+- [Project layout](#project-layout)
+- [Scripts](#scripts)
+- [Deploying](#deploying)
 
-  * [`/pages/+config.ts`](#pagesconfigts)
-  * [Routing](#routing)
-  * [`/pages/_error/+Page.jsx`](#pages_errorpagejsx)
-  * [`/pages/+onPageTransitionStart.ts` and `/pages/+onPageTransitionEnd.ts`](#pagesonpagetransitionstartts-and-pagesonpagetransitionendts)
-  * [SSR](#ssr)
-  * [HTML Streaming](#html-streaming)
+## How it fits together
 
-<!--bati:end section="TOC"-->
+```
+affiliate sites ──(poll every 60s)──▶ browser (OrderService) ──▶ PostgREST ──▶ Postgres
+  api.php / orders_v1                                         /rest
+```
 
-<!--bati:end section="intro"-->
+- **Order sources** are registered in `pages/(authenticated)/+Layout.tsx`. Each one is
+  an affiliate site and a parser from `src/services/orders.service/sources.ts`
+  (`sourceUsingJambWaec` for the PHP `api.php` sites, `sourceUsingProductTable` for the
+  `/api/orders_v1` sites). The name a source is registered under is stamped on
+  `orders.source`, so renaming one splits its history.
+- While an admin has the app open, `OrderService` polls every source for orders newer
+  than its last pull (kept in `configs.timestamp`). New rows are inserted with
+  `ON CONFLICT (source, id) DO NOTHING`, so a re-pull never overwrites an order an
+  admin has already worked on.
+- **Auth**: `rpc/login` returns an access and a refresh token. The access token is kept
+  in `sessionStorage` and the refresh token in `localStorage`. `WithAuth`
+  (`src/utils/postgrest.ts`) attaches the token and refreshes it once on a `PGRST301`.
 
-<!--bati:start section="features"-->
+## Local development
 
-<!--bati:start category="UI Framework" flag="react"-->
+You need [Bun](https://bun.sh) and Docker.
 
-## React
+```bash
+bun install
+docker compose up -d                 # Postgres on :5433, PostgREST on :3001
+./docker/apply-migrations.sh         # replay migrations/*.up.sql (add --fresh to start over)
+docker compose exec -T db psql -U postgres -d deacons < docker/seed-dev.sql
+bun run dev                          # http://localhost:3000
+```
 
-This app is ready to start. It's powered by [Vike](https://vike.dev) and [React](https://react.dev/learn).
+Vite proxies `/rest` to PostgREST (`PG_REST` overrides the default
+`http://localhost:3001`). In development the client calls
+`http://localhost:3000/rest`, set in `pages/credentials.shared.ts`, so the dev server
+has to be on port 3000.
 
-### `/pages/+config.ts`
+The seed creates an admin, `admin@prep50.com.ng` / `secret123`, plus a dev app client
+and a few orders.
 
-Such `+` files are [the interface](https://vike.dev/config) between Vike and your code. It defines:
+The background pull runs against the **live** affiliate sites in development as well,
+so real orders will appear in your local database.
 
-* A default [`<Layout>` component](https://vike.dev/Layout) (that wraps your [`<Page>` components](https://vike.dev/Page)).
-* A default [`title`](https://vike.dev/title).
-* Global [`<head>` tags](https://vike.dev/head-tags).
+## Migrations
 
-### Routing
+Migrations live in `migrations/` as `<timestamp>_<name>.up.sql` / `.down.sql`.
 
-[Vike's built-in router](https://vike.dev/routing) lets you choose between:
+- **Local stack:** `./docker/apply-migrations.sh` (a plain ordered replay).
+- **Real databases:** `./scripts/migrate.sh` (uses `sqlx`, which records history in
+  `_sqlx_migrations`). Use `--info` to see what is pending and `--revert` to roll back
+  the latest one. Never replay files with `psql` on a database sqlx manages.
 
-* [Filesystem Routing](https://vike.dev/filesystem-routing) (the URL of a page is determined based on where its `+Page.jsx` file is located on the filesystem)
-* [Route Strings](https://vike.dev/route-string)
-* [Route Functions](https://vike.dev/route-function)
+Recent migrations the app depends on:
 
-### `/pages/_error/+Page.jsx`
+| Migration | What it adds |
+|---|---|
+| `20250911000000_phone_standardisation` | `normalize_phone()` trigger and the generated `orders.phone_digits` column that phone search uses |
+| `20261014000000_order_archive` | `orders.archived_on`, the `confirm_orders_on_assign` trigger plus a backfill, and dashboard chart functions that leave out archived orders |
 
-The [error page](https://vike.dev/error-page) which is rendered when errors occur.
+## Orders
 
-### `/pages/+onPageTransitionStart.ts` and `/pages/+onPageTransitionEnd.ts`
+The Orders page (`pages/(authenticated)/orders/+Page.tsx`) fetches one page of 100
+rows at a time from the server. Filters, sort and search all run as part of that query.
 
-The [`onPageTransitionStart()` hook](https://vike.dev/onPageTransitionStart), together with [`onPageTransitionEnd()`](https://vike.dev/onPageTransitionEnd), enables you to implement page transition animations.
+- **Status filters:** All, UnConfirmed, Confirmed, UnAssigned, Assigned,
+  PendingDelivery, Delivered and Archived. Only one can be active at a time.
+- **Refiners:** Date range, Affiliate and Category. These can be combined with a status
+  filter. Filters are saved in `localStorage` under `filters`.
+- **Sort:** the ASC/DESC button orders by `created_at` (by `delivered_on` on the
+  Delivered filter). It is saved under `orders_sort`. Use ASC to see the oldest orders
+  first.
+- **Search:** matches the customer name (substring, case-insensitive), the phone
+  number in any format (through `phone_digits`, which holds the last ten digits), and
+  the order number. While a search is active it covers all orders and ignores the
+  other filters. The one exception is Archived: with that filter on, search looks only
+  at archived orders.
+- **Confirming and assigning:** assigning an agent also confirms the order. The client
+  does this, and the `confirm_orders_on_assign` trigger enforces it for every write
+  path. After any change the list reloads, so the order leaves views it no longer
+  matches.
+- **Archive:** use this for duplicate submissions. An archived order is hidden from
+  every list and from the dashboard charts but kept on record. Find it under
+  **Archived** and click **Restore** to bring it back. Unconfirmed orders can still be
+  deleted outright.
+- **Copy:** name, phone and order number each have a copy button. It shows an inline
+  "Copied" label instead of an alert.
 
-### SSR
+Saving an order goes through `Order.save()` in `src/services/orders.service/order.ts`.
+It drops the generated `phone_digits` column, which Postgres refuses to accept on
+insert or update, and reports failures with a toast. If a save fails, the card goes
+back to its previous state.
 
-SSR is enabled by default. You can [disable it](https://vike.dev/ssr) for all your pages or only for some pages.
+## Dashboard
 
-### HTML Streaming
+`pages/(authenticated)/index/+Page.tsx` shows:
 
-You can enable/disable [HTML streaming](https://vike.dev/stream) for all your pages, or only for some pages while still using it for others.
+- stat tiles for the selected year: orders, delivered, pending, agents and affiliates
+- **Orders per month:** a column chart with delivered and pending stacked
+  (`cummulative_orders_for_affiliate_by_month`)
+- **Orders by affiliate** and **Orders by state:** ranked horizontal bars, top 10
+  plus "others" (`cummulative_orders_by_state`)
+- the last 10 orders, and the books each agent is holding
 
-<!--bati:end category="UI Framework" flag="react"-->
+The charts use Chart.js through `react-chartjs-2`. The colours are a palette checked
+to be colour-blind safe, defined in `VIZ` at the top of the page.
 
-<!--bati:end section="features"-->
+## Project layout
 
-<!--bati:end section="document"-->
+```
+pages/                    Vike pages (filesystem routing)
+  (authenticated)/        everything behind login; +Layout.tsx registers order sources
+  login/
+src/
+  components/             UI: Order card, CopyButton, Dialog, Pagination, Select, ...
+  services/
+    orders.service/       OrderService (fetch, search, ingest), Order model, sources
+    agents.service.ts
+    affiliate.service.ts
+  utils/                  postgrest client + WithAuth, Carbon (dates), phone, toast
+@types/                   shared model types, observer helpers
+migrations/               SQL migrations (up/down)
+docker/                   local stack: Postgres image, migration runner, seed, checks
+scripts/                  migrate.sh, app client and authenticator setup, one-off data fixes
+```
+
+## Scripts
+
+| Command | What it does |
+|---|---|
+| `bun run dev` | Vite dev server |
+| `bun run build` | production build into `dist/` |
+| `bun run preview` | serve the production build |
+| `./scripts/migrate.sh` | apply pending migrations to `DATABASE_URL` |
+| `./scripts/register-app-client.sh` | register a third-party app client and its namespaces (run `docker/check-sources.sql` first) |
+| `./scripts/set-authenticator-password.sh` | set the PostgREST `authenticator` password |
+| `bun run scripts/normalize-phones.ts` | one-off phone backfill (dry run unless `--apply`) |
+| `./docker/test-app-client.sh` | end-to-end check of the app-client auth surface |
+
+## Deploying
+
+1. Run migrations: `./scripts/migrate.sh --info`, then `./scripts/migrate.sh`.
+2. Build with `bun run build` and serve with `bun run preview` (`admin.prep50.ng` is
+   allowed in `vite.config.ts`). In production the client calls
+   `https://admin.prep50.ng/rest`.
