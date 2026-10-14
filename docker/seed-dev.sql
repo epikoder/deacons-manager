@@ -26,10 +26,21 @@ ON CONFLICT (app_id, namespace)
 
 -- A curated affiliate row for Ella only, so me_namespace() can be checked both ways:
 -- Ella resolves display metadata, Emeka returns scope with NULL metadata.
+-- No unique key here either, so check rather than rely on ON CONFLICT.
 INSERT INTO public.affiliates(fullname, phone, email, source_list)
-  VALUES ('Ella Onyeka', '07060752869', 'ella@prep50.com.ng', ARRAY['Ella'])
-ON CONFLICT
-  DO NOTHING;
+SELECT
+  'Ella Onyeka',
+  '07060752869',
+  'ella@prep50.com.ng',
+  ARRAY['Ella']
+WHERE
+  NOT EXISTS (
+    SELECT
+      1
+    FROM
+      public.affiliates
+    WHERE
+      email = 'ella@prep50.com.ng');
 
 -- Orders. delivered_on drives the earnings functions; created_at drives the order counts.
 -- Phones are deliberately written in different formats. The normalize_phone trigger
@@ -57,7 +68,19 @@ ON CONFLICT (source, id)
 -- An admin, so the test script can prove the existing Vike path still works after the
 -- REVOKE ... FROM PUBLIC on the arg-taking functions. Note auth.create_user() cannot be
 -- used: it inserts a `fullname` column that auth.users does not have.
+-- auth.users had no unique key on email, so ON CONFLICT never fired and every re-run
+-- of this file added another admin with the same address. Check explicitly.
 INSERT INTO auth.users(email, password, role)
-  VALUES ('admin@prep50.com.ng', 'secret123', 'admin')
-ON CONFLICT
-  DO NOTHING;
+SELECT
+  'admin@prep50.com.ng',
+  'secret123',
+  'admin'
+WHERE
+  NOT EXISTS (
+    SELECT
+      1
+    FROM
+      auth.users
+    WHERE
+      lower(email) = 'admin@prep50.com.ng'
+      AND deleted_at IS NULL);
