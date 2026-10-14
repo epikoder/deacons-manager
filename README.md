@@ -95,11 +95,19 @@ rows at a time from the server. Filters, sort and search all run as part of that
 - **Sort:** the ASC/DESC button orders by `created_at` (by `delivered_on` on the
   Delivered filter). It is saved under `orders_sort`. Use ASC to see the oldest orders
   first.
-- **Search:** matches the customer name (substring, case-insensitive), the phone
-  number in any format (through `phone_digits`, which holds the last ten digits), and
-  the order number. While a search is active it covers all orders and ignores the
-  other filters. The one exception is Archived: with that filter on, search looks only
-  at archived orders.
+- **Search:** by default it matches the customer name (substring, case-insensitive),
+  the phone number in any format (through `phone_digits`, which holds the last ten
+  digits), and the order number. While you type, a dropdown offers to narrow it to one
+  field (**Order number**, **Customer name** or **Phone**). The chosen field shows as a
+  chip in the box. Without a chip, order numbers match anywhere (`67` finds #67, #767,
+  #1067); with the Order number chip they must match exactly. In an order number `x`
+  stands for any digit, so `1xx` finds #100–#199 with or without the chip. Typing the
+  field also works: `order number: 1727` (or `order: 1727`, `#1727`), `name: Ada`,
+  `phone: 0803`. The same help is shown under the search box. Backspace at the start of the box removes the chip. The rules live in
+  `src/services/orders.service/search.ts`, with tests in `test/search.test.ts`
+  (`bun test test/search.test.ts`). While a search is active it covers all orders and
+  ignores the other filters. The one exception is Archived: with that filter on,
+  search looks only at archived orders.
 - **Confirming and assigning:** assigning an agent also confirms the order. The client
   does this, and the `confirm_orders_on_assign` trigger enforces it for every write
   path. After any change the list reloads, so the order leaves views it no longer

@@ -9,11 +9,16 @@ import Input from "../../../src/components/Input";
 import {
   ActivityIndicator,
   ArrowForward,
-  CloseIcon,
-  SearchIcon,
   SortAscIcon,
   SortDescIcon,
 } from "../../../src/components/Icons";
+import OrderSearchBar, {
+  SearchHelp,
+} from "../../../src/components/OrderSearchBar";
+import {
+  OrderSearch,
+  SCOPE_LABEL,
+} from "../../../src/services/orders.service/search";
 import { OrderItem } from "../../../src/services/orders.service/order";
 import { postgrest, WithAuth } from "../../../src/utils/postgrest";
 import Pagination from "../../../src/components/Pagination";
@@ -69,9 +74,8 @@ export default function () {
   // A search looks across every order: it is how an admin finds one customer's
   // history, so the status/affiliate/category/date filters - which persist in
   // localStorage and are easy to forget are on - must not quietly narrow it.
-  const [search, setSearch] = useState("");
-  const [searchText, setSearchText] = useState("");
-  const searching = search.trim() !== "";
+  const [search, setSearch] = useState<OrderSearch>({ scope: "all", text: "" });
+  const searching = search.text.trim() !== "";
   const searchTimer = useRef<ReturnType<typeof setTimeout>>();
   const loading = OrderService.instance.loading;
   const total = OrderService.instance.totalOrders;
@@ -142,7 +146,8 @@ export default function () {
     if (searching) {
       OrderService.instance.fetchOrders(page, {
         limit: PER_PAGE,
-        search,
+        search: search.text,
+        searchIn: search.scope,
         sort,
         archived,
       });
@@ -279,12 +284,11 @@ export default function () {
 
   // The timer is a ref: a plain `let` is redeclared on every render, and each fetch
   // re-renders the page, so it stopped debouncing after the first request.
-  const debounce = (text: string, delay = 300) => {
-    setSearchText(text);
+  const debounce = (next: OrderSearch, delay = 300) => {
     clearTimeout(searchTimer.current);
     searchTimer.current = setTimeout(() => {
       setPage(1);
-      setSearch(text.trim());
+      setSearch({ scope: next.scope, text: next.text.trim() });
     }, delay);
   };
 
@@ -345,48 +349,18 @@ export default function () {
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-          <div className="relative w-full max-w-md">
-            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-400" />
-            <input
-              name="search"
-              type="search"
-              value={searchText}
-              autoComplete="off"
-              placeholder="Search name, phone or order number…"
-              className="w-full rounded-lg border border-zinc-300 bg-white py-2 pl-9 pr-9 text-sm outline-none transition-shadow placeholder:text-zinc-400 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 [&::-webkit-search-cancel-button]:hidden"
-              onChange={(ev) => debounce(ev.currentTarget.value)}
-              onKeyDown={(ev) => {
-                if (ev.key === "Enter") debounce(ev.currentTarget.value, 0);
-                if (ev.key === "Escape") debounce("", 0);
-              }}
-            />
-            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
-              {searching && loading
-                ? (
-                  <ActivityIndicator
-                    active
-                    className="size-4 text-zinc-400 m-1"
-                  />
-                )
-                : searchText && (
-                  <button
-                    type="button"
-                    aria-label="Clear search"
-                    className="p-1 rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100"
-                    onClick={() => debounce("", 0)}
-                  >
-                    <CloseIcon className="size-4" />
-                  </button>
-                )}
-            </div>
-          </div>
+          <OrderSearchBar onSearch={debounce} loading={loading} />
           {searching && (
             <div className="text-xs text-zinc-500">
-              Searching all {filter.has(Filter.archived) ? "archived " : ""}
+              {search.scope === "all"
+                ? "Searching all "
+                : `Searching by ${SCOPE_LABEL[search.scope].toLowerCase()} across all `}
+              {filter.has(Filter.archived) ? "archived " : ""}
               orders - the other filters don't apply while a search is active.
             </div>
           )}
         </div>
+        <SearchHelp />
 
         <div className="flex flex-wrap items-center gap-2">
           <FilterButton
@@ -545,12 +519,20 @@ export default function () {
           <div className="rounded-xl border border-dashed border-zinc-300 bg-white py-16 text-center">
             <div className="text-sm font-medium text-zinc-700">
               {searching
-                ? `No orders match “${search}”`
+                ? search.scope === "order"
+                  ? `No order numbered “${search.text}”`
+                  : search.scope === "all"
+                  ? `No orders match “${search.text}”`
+                  : `No orders with ${SCOPE_LABEL[search.scope].toLowerCase()} matching “${search.text}”`
                 : "No orders here"}
             </div>
             <div className="mt-1 text-xs text-zinc-500">
               {searching
-                ? "Try part of the name, the last digits of the phone, or the order number."
+                ? search.scope === "order"
+                  ? "Order numbers must match exactly. Remove the Order number chip to search every field."
+                  : search.scope === "all"
+                  ? "Try part of the name, the last digits of the phone, or the order number."
+                  : `Remove the ${SCOPE_LABEL[search.scope]} chip to search every field.`
                 : "Try another filter, or a different page."}
             </div>
           </div>

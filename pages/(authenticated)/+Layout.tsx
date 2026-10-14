@@ -163,7 +163,9 @@ function Sidebar({ children }: { children: React.ReactNode }) {
 
 function Content({ children }: { children: React.ReactNode }) {
 	return (
-		<div id="page-container" className="w-full">
+		// min-w-0: a flex item will not shrink below its content's widest line, so one
+		// long nowrap line (the search help, collapsed) widened the whole page.
+		<div id="page-container" className="w-full min-w-0">
 			<div id="page-content" className="h-screen overflow-hidden w-full">
 				{children}
 			</div>

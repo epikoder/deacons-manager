@@ -6,6 +6,7 @@ import { normalizePhoneQuery } from "../../utils/phone";
 import { postgrest, WithAuth } from "../../utils/postgrest";
 import Toast from "../../utils/toast";
 import Order, { OFFICE_CHARGE, OrderItem } from "./order";
+import { searchClauses, SearchScope } from "./search";
 
 type AwaitedOrderWithSource = Promise<IOrder[]>;
 type SourceTimeStamp = Record<string, Carbon>;
@@ -19,6 +20,8 @@ export type FetchOrdersParam = Omit<SearchParam, "offset"> & {
   agent_id?: string;
   phone?: string;
   search?: string;
+  /** Which field `search` looks in; "all" (the default) tries each of them. */
+  searchIn?: SearchScope;
   /** false (the default) hides archived orders, true shows only them. */
   archived?: boolean;
   /** By created_at, or delivered_on when filtering on delivered. */
@@ -362,25 +365,21 @@ export default class OrderService extends SubscriberProvider<Order[]> {
       query = query.like("phone_digits", `%${normalizePhoneQuery(param.phone)}%`);
     }
 
-    if (param.search) {
-      const raw = param.search.trim();
-      // These characters are part of PostgREST's or() grammar; leaving them in a value
-      // produces a malformed filter rather than an empty result. Values are also
-      // double-quoted below, so a name with a space or a full stop stays one value.
-      const text = raw.replace(/[(),"\\*]/g, " ").replace(/\s+/g, " ").trim();
-      const digits = normalizePhoneQuery(raw);
-      const clauses: string[] = [];
-      // Three digits is where a phone match stops being every row in the table.
-      if (digits.length >= 3) clauses.push(`phone_digits.like."*${digits}*"`);
-      if (text.length >= 2) clauses.push(`fullname.ilike."*${text}*"`);
-      // Order numbers are short ("482"), so match them exactly from one character up,
-      // and as a substring once there is enough to be selective.
-      if (text.length >= 1) {
-        clauses.push(
-          text.length >= 3 ? `id.ilike."*${text}*"` : `id.eq."${text}"`,
-        );
+    if (param.search?.trim()) {
+      const scope = param.searchIn ?? "all";
+      const clauses = searchClauses({ scope, text: param.search });
+      if (clauses.length > 0) {
+        query = query.or(clauses.join(","));
+      } else if (scope !== "all") {
+        // Nothing in the text can match this field ("phone: 0" has no digits once
+        // the leading zero goes). Without a filter the query would return every
+        // order, which reads as "they all match".
+        this._totalOrders = 0;
+        this._loading = false;
+        this._orders.clear();
+        this.notifySubscribers(this.orders);
+        return;
       }
-      if (clauses.length > 0) query = query.or(clauses.join(","));
     }
 
     const { data, count, error } = await new WithAuth(query.abortSignal(signal))
