@@ -11,7 +11,6 @@ import {
   BarElement,
   CategoryScale,
   Chart,
-  ChartOptions,
   Legend,
   LinearScale,
   Plugin,
@@ -282,16 +281,14 @@ function StatTile(
   );
 }
 
-const baseTooltip: ChartOptions<"bar">["plugins"] = {
-  tooltip: {
-    backgroundColor: "#18181b",
-    titleFont: { ...FONT, size: 12, weight: "bold" },
-    bodyFont: { ...FONT, size: 12 },
-    padding: 10,
-    cornerRadius: 8,
-    boxPadding: 4,
-    usePointStyle: true,
-  },
+const tooltipStyle = {
+  backgroundColor: "#18181b",
+  titleFont: { ...FONT, size: 12, weight: "bold" as const },
+  bodyFont: { ...FONT, size: 12 },
+  padding: 10,
+  cornerRadius: 8,
+  boxPadding: 4,
+  usePointStyle: true,
 };
 
 function MonthlyOrdersChart(
@@ -352,7 +349,6 @@ function MonthlyOrdersChart(
             },
           },
           plugins: {
-            ...baseTooltip,
             legend: {
               position: "top",
               align: "end",
@@ -366,7 +362,7 @@ function MonthlyOrdersChart(
               },
             },
             tooltip: {
-              ...baseTooltip.tooltip,
+              ...tooltipStyle,
               callbacks: {
                 footer: (items) =>
                   `Total: ${fmt(items.reduce((s, i) => s + (i.raw as number), 0))}`,
@@ -438,7 +434,7 @@ function RankedBars(
             },
           },
           plugins: {
-            ...baseTooltip,
+            tooltip: tooltipStyle,
             legend: { display: false },
           },
         }}

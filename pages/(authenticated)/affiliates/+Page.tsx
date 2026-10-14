@@ -39,7 +39,7 @@ export default function () {
           New Affiliate
         </Button>
       </div>
-      <div className="p-4">
+      <div className="p-4 flex flex-col gap-4">
         {affiliates.map((v) => (
           <AffiliateComponent key={v.ID + new Date().getTime()} affiliate={v} />
         ))}

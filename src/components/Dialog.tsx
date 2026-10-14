@@ -22,11 +22,16 @@ export const showAlertDialog = ({
   message,
   onCancel,
   onContinue,
+  confirmLabel = "Continue",
+  destructive = false,
 }: {
   title: ReactNode;
   message: ReactNode;
   onContinue: VoidFunction;
   onCancel?: VoidFunction;
+  confirmLabel?: string;
+  /** Red confirm button, for actions like removing an account. */
+  destructive?: boolean;
 }) => {
   const container = document.createElement("div");
   const closeFn = (el: HTMLDivElement) => el.remove();
@@ -51,9 +56,11 @@ export const showAlertDialog = ({
               Cancel
             </button>
             <button
-              className={
-                "px-4 py-1.5 rounded-lg bg-green-600 text-white font-medium hover:bg-green-700"
-              }
+              className={`px-4 py-1.5 rounded-lg text-white font-medium ${
+                destructive
+                  ? "bg-red-600 hover:bg-red-700"
+                  : "bg-green-600 hover:bg-green-700"
+              }`}
               onClick={async () => {
                 try {
                   await onContinue();
@@ -63,7 +70,7 @@ export const showAlertDialog = ({
                 }
               }}
             >
-              Continue
+              {confirmLabel}
             </button>
           </div>
         </Fragment>

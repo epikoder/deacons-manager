@@ -49,7 +49,7 @@ export default function () {
           New Agent
         </Button>
       </div>
-      <div className="p-4">
+      <div className="p-4 flex flex-col gap-4">
         {agents.map((agent) => (
           <AgentComponent key={agent.ID + new Date().getTime()} agent={agent} />
         ))}

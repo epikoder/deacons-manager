@@ -17,6 +17,7 @@ scopes) live in the database.
 - [Migrations](#migrations)
 - [Orders](#orders)
 - [Dashboard](#dashboard)
+- [Users](#users)
 - [Project layout](#project-layout)
 - [Scripts](#scripts)
 - [Deploying](#deploying)
@@ -79,6 +80,8 @@ Recent migrations the app depends on:
 |---|---|
 | `20250911000000_phone_standardisation` | `normalize_phone()` trigger and the generated `orders.phone_digits` column that phone search uses |
 | `20261014000000_order_archive` | `orders.archived_on`, the `confirm_orders_on_assign` trigger plus a backfill, and dashboard chart functions that leave out archived orders |
+| `20261014010000_user_management` | the user RPCs below, a fixed `refresh_token` (it now checks the token's expiry and that the user still exists), and a unique index on active emails, created only when no duplicates exist |
+| `20261014020000_change_password` | `change_password()` for Settings → Change password |
 
 ## Orders
 
@@ -126,6 +129,38 @@ back to its previous state.
 
 The charts use Chart.js through `react-chartjs-2`. The colours are a palette checked
 to be colour-blind safe, defined in `VIZ` at the top of the page.
+
+## Users
+
+`/users` is for admins only. Staff who open it see an "Admins only" notice, and every
+RPC behind it can only be executed by `admin`. There are two roles: **Staff**
+(`authenticated`: orders, agents, affiliates) and **Admin** (also users and book cost).
+
+- **List** (`/users`): search by name or email, with Active and Removed tabs.
+- **New user** (`/users/create`): name, email, role and an initial password, at least 8
+  characters. The admin shares the password with the person directly.
+- **User page** (`/users/<id>`): edit name, email and role; set a new password; remove
+  or restore the account.
+
+The rules are enforced in the database, so they hold for any client:
+
+| RPC | Notes |
+|---|---|
+| `list_users()` | a set-returning function; filter and sort it like a table (`?id=eq.<uuid>`, `?select=*&order=created_at.desc`) |
+| `create_user(fname, lname, email, password, role)` | email is trimmed and lower-cased, and must not belong to another active user |
+| `update_user(user_id, fname, lname, email, role)` | you can't change your own role, and the last admin can't be demoted |
+| `reset_user_password(user_id, password)` | |
+| `delete_user(user_id)` | soft delete; you can't remove yourself or the last admin |
+| `restore_user(user_id)` | refused if the email has since been given to someone else |
+
+**Changing your own password** (Settings → Change password) calls
+`change_password(current_password, new_password)`. It checks the current password,
+signs out every other session, and returns a new token pair so the current session
+stays signed in.
+
+Changing someone's role or email, resetting their password, or removing them deletes
+their tokens. Their current access token keeps working until it expires (at most an
+hour), after which they have to sign in again.
 
 ## Project layout
 

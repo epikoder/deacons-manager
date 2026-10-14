@@ -1,7 +1,7 @@
 import { Observer } from "../../../@types/observable";
 import Carbon from "../../utils/carbon";
 import { postgrest, WithAuth } from "../../utils/postgrest";
-import Toast from "../../utils/toast";
+import Toast, { escapeHtml } from "../../utils/toast";
 import AgentService, { Agent } from "../agents.service";
 import OrderService from "./orders.service";
 
@@ -401,6 +401,3 @@ export default class Order extends Observer {
     }, new Carbon());
   }
 }
-
-const escapeHtml = (s: string) =>
-  String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
