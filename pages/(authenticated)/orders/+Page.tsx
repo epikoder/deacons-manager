@@ -2,6 +2,7 @@ import React, { Fragment, useEffect, useRef, useState } from "react";
 import { OrderComponent } from "../../../src/components/Order.component";
 import { useOrders } from "../../../src/services/orders.service/hook";
 import OrderService, {
+  FetchOrdersParam,
   SortDirection,
 } from "../../../src/services/orders.service/orders.service";
 import Carbon from "../../../src/utils/carbon";
@@ -19,25 +20,136 @@ import {
   OrderSearch,
   SCOPE_LABEL,
 } from "../../../src/services/orders.service/search";
-import { OrderItem } from "../../../src/services/orders.service/order";
+import Order, { OrderItem } from "../../../src/services/orders.service/order";
 import { postgrest, WithAuth } from "../../../src/utils/postgrest";
 import Pagination from "../../../src/components/Pagination";
 import List from "rc-virtual-list";
 
-enum Filter {
-  all = "All",
-  pendingDelivery = "PendingDelivery",
-  delivered = "Delivered",
-  assigned = "Assigned",
-  unassigned = "UnAssigned",
-  confirmed = "Confirmed",
-  unconfirmed = "UnConfirmed",
-  archived = "Archived",
-  affilate = "Affiliate",
-  date = "Date",
-  state = "State",
-  category = "Category",
-}
+type Status =
+  | "all"
+  | "unconfirmed"
+  | "confirmed"
+  | "unassigned"
+  | "assigned"
+  | "pendingDelivery"
+  | "delivered"
+  | "archived";
+type Refiner = "date" | "affiliate" | "category";
+
+/**
+ * One status at a time, each with one definition: `query` is what the server
+ * filters on, `match` hides an order the moment an action moves it out of the list.
+ *
+ * Picking a status used to add others to a set ("Delivered" also turned on Confirmed
+ * and Assigned). The server ANDed them, which hid delivered orders that weren't also
+ * confirmed and assigned, and the page re-filtered once per status in the set with
+ * the last one winning, so "Delivered" showed whatever "Assigned" let through.
+ */
+const STATUSES: {
+  key: Status;
+  label: string;
+  hint: string;
+  query: Partial<FetchOrdersParam>;
+  match: (o: Order) => boolean;
+}[] = [
+  {
+    key: "all",
+    label: "All",
+    hint: "Every order that isn't archived",
+    query: {},
+    match: () => true,
+  },
+  {
+    key: "unconfirmed",
+    label: "UnConfirmed",
+    hint: "Not confirmed yet",
+    query: { confirmed: false },
+    match: (o) => !o.isComfirmed,
+  },
+  {
+    key: "confirmed",
+    label: "Confirmed",
+    hint: "Confirmed, with or without an agent",
+    query: { confirmed: true },
+    match: (o) => o.isComfirmed,
+  },
+  {
+    key: "unassigned",
+    label: "UnAssigned",
+    hint: "Confirmed and waiting for an agent",
+    query: { confirmed: true, assigned: false },
+    match: (o) => o.isComfirmed && !o.isAssignedToAgent,
+  },
+  {
+    key: "assigned",
+    label: "Assigned",
+    hint: "Given to an agent",
+    query: { assigned: true },
+    match: (o) => o.isAssignedToAgent,
+  },
+  {
+    key: "pendingDelivery",
+    label: "PendingDelivery",
+    hint: "With an agent, not delivered yet",
+    query: { assigned: true, delivery_status: "pending" },
+    match: (o) => o.isAssignedToAgent && o.deliveryStatus === "pending",
+  },
+  {
+    key: "delivered",
+    label: "Delivered",
+    hint: "Marked delivered",
+    query: { delivery_status: "delivered" },
+    match: (o) => o.deliveryStatus === "delivered",
+  },
+  {
+    key: "archived",
+    label: "Archived",
+    hint: "Hidden duplicates, kept on record",
+    query: { archived: true },
+    match: (o) => o.isArchived,
+  },
+];
+const STATUS = Object.fromEntries(STATUSES.map((d) => [d.key, d])) as Record<
+  Status,
+  (typeof STATUSES)[number]
+>;
+
+const REFINERS: { key: Refiner; label: string }[] = [
+  { key: "date", label: "Date" },
+  { key: "affiliate", label: "Affiliate" },
+  { key: "category", label: "Category" },
+];
+
+/**
+ * Saved filters. The old format was one array mixing statuses and refiners by label
+ * ("Delivered", "Confirmed", "Assigned", "Date"); take the most specific status from
+ * it so nobody's saved view jumps to All.
+ */
+const readSavedFilters = (
+  saved: { status?: string; refiners?: string[]; filter?: string[] },
+): { status: Status; refiners: Set<Refiner> } => {
+  const byLabel = Object.fromEntries(
+    [...STATUSES, ...REFINERS].map((d) => [d.label, d.key]),
+  ) as Record<string, string>;
+  const refiners = new Set<Refiner>(
+    (saved.refiners ?? (saved.filter ?? []).map((l) => byLabel[l]))
+      .filter((k): k is Refiner => REFINERS.some((r) => r.key === k)),
+  );
+  if (saved.status && saved.status in STATUS) {
+    return { status: saved.status as Status, refiners };
+  }
+  const legacy = new Set((saved.filter ?? []).map((l) => byLabel[l]));
+  const priority: Status[] = [
+    "archived",
+    "delivered",
+    "pendingDelivery",
+    "unassigned",
+    "assigned",
+    "unconfirmed",
+    "confirmed",
+  ];
+  return { status: priority.find((k) => legacy.has(k)) ?? "all", refiners };
+};
 
 const SORT_KEY = "orders_sort";
 const PER_PAGE = 100;
@@ -50,19 +162,13 @@ const readSort = (): SortDirection => {
   }
 };
 
-/** Status filters are exclusive: picking one drops the others but keeps the refiners. */
-const keepRefiners = (filter: Set<Filter>) => [
-  ...(filter.has(Filter.date) ? [Filter.date] : []),
-  ...(filter.has(Filter.affilate) ? [Filter.affilate] : []),
-  ...(filter.has(Filter.category) ? [Filter.category] : []),
-];
-
 export default function () {
   const __orders = useOrders();
   // Oldest-first is how the office works through a backlog (1 January on page 1), so
   // the direction is a choice, and it sticks between visits.
   const [sort, setSort] = useState<SortDirection>("desc");
-  const [filter, setFilter] = useState<Set<Filter>>(new Set());
+  const [status, setStatus] = useState<Status>("all");
+  const [refiners, setRefiners] = useState<Set<Refiner>>(new Set());
   const [affiliateFilter, setAffiliateFilter] = useState<Set<string>>(
     new Set(),
   );
@@ -85,8 +191,14 @@ export default function () {
 
   useEffect(() => {
     (async () => {
-      const f = JSON.parse(localStorage.getItem("filters") ?? "{}");
-      let _filter: Set<Filter> = new Set(f.filter ?? [Filter.all]);
+      let f: any = {};
+      try {
+        f = JSON.parse(localStorage.getItem("filters") ?? "{}");
+      } catch {
+        // Unreadable saved filters: start from All.
+      }
+      const saved = readSavedFilters(f);
+      const _refiners = saved.refiners;
       let _affiliateFilter: Set<string> = new Set(f.affiliates ?? []);
       setCategoryFilter(new Set(f.categories ?? []));
 
@@ -101,13 +213,14 @@ export default function () {
         ).unwrap();
 
         if (data) {
-          _filter.add(Filter.affilate);
+          _refiners.add("affiliate");
           (data.source_list as string[]).forEach((v) =>
             _affiliateFilter.add(v)
           );
         }
       }
-      setFilter(_filter);
+      setStatus(saved.status);
+      setRefiners(_refiners);
       setAffiliateFilter(_affiliateFilter);
       setSort(readSort());
       _setReady(true);
@@ -117,15 +230,17 @@ export default function () {
   useEffect(() => {
     if (!_ready) return;
     const data = {
-      filter: [...filter.values()],
+      status,
+      refiners: [...refiners.values()],
       affiliates: [...affiliateFilter.values()],
       categories: [...categoryFilter.values()],
     };
-    localStorage.setItem(
-      "filters",
-      JSON.stringify(data),
-    );
-  }, [filter, affiliateFilter, categoryFilter]);
+    try {
+      localStorage.setItem("filters", JSON.stringify(data));
+    } catch {
+      // Blocked storage: the filters still apply for this visit.
+    }
+  }, [status, refiners, affiliateFilter, categoryFilter]);
 
   useEffect(() => {
     if (!_ready) return;
@@ -140,7 +255,7 @@ export default function () {
     // Wait for the saved filters and sort, or the first paint fetches the wrong page
     // and the right one races it.
     if (!_ready) return;
-    const archived = filter.has(Filter.archived);
+    const archived = status === "archived";
     // The search lives in state and goes through this one fetch, so paging a long
     // result keeps the query instead of falling back to the unfiltered list.
     if (searching) {
@@ -156,32 +271,29 @@ export default function () {
     OrderService.instance.fetchOrders(page, {
       limit: PER_PAGE,
       sort,
-      archived,
-      start_date: dateFilter[0]?.formatLocalISO(),
-      end_date: dateFilter[1]?.formatLocalISO(),
-      confirmed: filter.has(Filter.confirmed)
-        ? true
-        : filter.has(Filter.unconfirmed)
-        ? false
+      ...STATUS[status].query,
+      start_date: refiners.has("date")
+        ? dateFilter[0]?.formatLocalISO()
         : undefined,
-      assigned: filter.has(Filter.assigned)
-        ? true
-        : filter.has(Filter.unassigned)
-        ? false
-        : undefined,
-      category: filter.has(Filter.category)
+      end_date: refiners.has("date") ? dateFilter[1]?.formatLocalISO() : undefined,
+      category: refiners.has("category")
         ? [...categoryFilter.values()]
         : undefined,
-      delivery_status: filter.has(Filter.pendingDelivery)
-        ? "pending"
-        : filter.has(Filter.delivered)
-        ? "delivered"
-        : undefined,
-      source: filter.has(Filter.affilate)
+      source: refiners.has("affiliate")
         ? [...affiliateFilter.values()]
         : undefined,
     });
-  }, [_ready, page, filter, categoryFilter, affiliateFilter, dateFilter, search, sort]);
+  }, [
+    _ready,
+    page,
+    status,
+    refiners,
+    categoryFilter,
+    affiliateFilter,
+    dateFilter,
+    search,
+    sort,
+  ]);
 
   // The same order the server paged in, so page 1 really is the oldest (or newest).
   const direction = sort === "asc" ? 1 : -1;
@@ -193,91 +305,27 @@ export default function () {
     if (searching) {
       return [...__orders].sort(byCreated);
     }
-    let __: typeof __orders = [];
-    for (const key of filter) {
-      switch (key) {
-        case Filter.unconfirmed:
-          __ = [...__, ...__orders].unique().filter((o) => !o.isComfirmed);
-          break;
-        case Filter.confirmed:
-          __ = [...__, ...__orders].unique().filter((o) => o.isComfirmed);
-          break;
-        case Filter.unassigned:
-          __ = [...__, ...__orders]
-            .unique()
-            .filter((o) => !o.isAssignedToAgent && o.isComfirmed);
-          break;
-        case Filter.assigned:
-          __ = [...__, ...__orders]
-            .unique()
-            .filter((o) => o.isAssignedToAgent && o.isComfirmed);
-          break;
-        case Filter.pendingDelivery:
-          __ = [...__, ...__orders]
-            .unique()
-            .filter(
-              (o) =>
-                o.isAssignedToAgent &&
-                o.isComfirmed &&
-                o.deliveryStatus == "pending",
-            );
-          break;
-        case Filter.delivered:
-          __ = [...__, ...__orders]
-            .unique()
-            .filter(
-              (o) =>
-                o.isAssignedToAgent &&
-                o.isComfirmed &&
-                o.deliveryStatus == "delivered",
-            );
-          break;
-
-        case Filter.archived:
-          __ = [...__, ...__orders].unique().filter((o) => o.isArchived);
-          break;
-
-        case Filter.date:
-        case Filter.category:
-        case Filter.affilate:
-          break;
-
-        default:
-          __ = [...__orders];
-          break;
-      }
-    }
-
-    if (filter.has(Filter.date)) {
-      __ = __.unique().filter((o) => {
-        return (
-          (dateFilter[0] ? o.isAfter(dateFilter[0]) : true) &&
-          (dateFilter[1] ? o.isBefore(dateFilter[1]) : true)
-        );
-      });
-    }
-
-    if (filter.has(Filter.affilate)) {
-      __ = __.unique().filter((o) => affiliateFilter.has(o.source));
-    }
-
-    if (filter.has(Filter.category)) {
-      __ = __.unique().filter((o) => categoryFilter.has(o.orderItem));
-    }
+    // The server has filtered by the status and the refiners. This only takes out
+    // an order an action has just moved out of the view (confirmed on UnConfirmed,
+    // archived anywhere), before the refresh that follows comes back.
+    const def = STATUS[status];
+    let list = __orders.filter((o) =>
+      status === "archived" ? o.isArchived : !o.isArchived && def.match(o)
+    );
 
     // Strictly by date. Re-grouping a page by assigned / delivered status put a freshly
     // assigned order at the bottom of the list it was still in, and made the page order
     // disagree with the pagination.
-    __ = __.sort(byCreated);
-    if (filter.has(Filter.delivered)) {
-      __ = __.sort(
+    list = list.sort(byCreated);
+    if (status === "delivered") {
+      list = list.sort(
         (o, o1) =>
           direction *
           ((o.deliveredOn ? o.deliveredOn.getTime() : 0) -
             (o1.deliveredOn ? o1.deliveredOn.getTime() : 0)),
       );
     }
-    return __;
+    return list;
   };
 
   const orders = applyFilter();
@@ -292,20 +340,19 @@ export default function () {
     }, delay);
   };
 
-  // Status chips are exclusive; Confirmed is implied by the agent / delivery ones.
-  const pickStatus = (status: Filter, implies: Filter[] = []) => {
+  const pickStatus = (next: Status) => {
     setPage(1);
-    setFilter(new Set([status, ...implies, ...keepRefiners(filter)]));
+    setStatus(next);
   };
-  const toggleRefiner = (refiner: Filter) => {
+  const toggleRefiner = (refiner: Refiner) => {
     setPage(1);
-    filter.has(refiner) ? filter.delete(refiner) : filter.add(refiner);
-    if (refiner === Filter.category && filter.has(Filter.category)) {
+    const next = new Set(refiners);
+    next.has(refiner) ? next.delete(refiner) : next.add(refiner);
+    if (refiner === "category" && next.has("category")) {
       setCategoryFilter(new Set(Object.values(OrderItem)));
     }
-    setFilter(new Set([...filter]));
+    setRefiners(next);
   };
-  const isStatus = (f: Filter) => filter.has(f);
 
   return (
     <div className="overflow-y-auto h-screen flex flex-col">
@@ -321,7 +368,7 @@ export default function () {
                 ? "Loading…"
                 : `${Intl.NumberFormat().format(total)}${
                   searching ? " matching" : ""
-                }${filter.has(Filter.archived) ? " archived" : ""} order${
+                }${status === "archived" ? " archived" : ""} order${
                   total === 1 ? "" : "s"
                 }`}
             </p>
@@ -355,7 +402,7 @@ export default function () {
               {search.scope === "all"
                 ? "Searching all "
                 : `Searching by ${SCOPE_LABEL[search.scope].toLowerCase()} across all `}
-              {filter.has(Filter.archived) ? "archived " : ""}
+              {status === "archived" ? "archived " : ""}
               orders - the other filters don't apply while a search is active.
             </div>
           )}
@@ -363,75 +410,30 @@ export default function () {
         <SearchHelp />
 
         <div className="flex flex-wrap items-center gap-2">
-          <FilterButton
-            activeFilter={filter}
-            filter={Filter.all}
-            onClick={() => {
-              setPage(1);
-              setFilter(new Set([Filter.all]));
-            }}
-          />
-          <FilterButton
-            activeFilter={filter}
-            filter={Filter.unconfirmed}
-            onClick={() => pickStatus(Filter.unconfirmed)}
-          />
-          <FilterButton
-            activeFilter={filter}
-            filter={Filter.confirmed}
-            onClick={() => pickStatus(Filter.confirmed)}
-          />
-          <FilterButton
-            activeFilter={filter}
-            filter={Filter.unassigned}
-            onClick={() => pickStatus(Filter.unassigned, [Filter.confirmed])}
-          />
-          <FilterButton
-            activeFilter={filter}
-            filter={Filter.assigned}
-            onClick={() => pickStatus(Filter.assigned, [Filter.confirmed])}
-          />
-          <FilterButton
-            activeFilter={filter}
-            filter={Filter.pendingDelivery}
-            onClick={() =>
-              pickStatus(Filter.pendingDelivery, [Filter.confirmed])}
-          />
-          <FilterButton
-            activeFilter={filter}
-            filter={Filter.delivered}
-            onClick={() =>
-              pickStatus(Filter.delivered, [Filter.confirmed, Filter.assigned])}
-          />
-          <FilterButton
-            activeFilter={filter}
-            filter={Filter.archived}
-            tone="muted"
-            onClick={() => pickStatus(Filter.archived)}
-          />
+          {STATUSES.map((d) => (
+            <FilterButton
+              key={d.key}
+              label={d.label}
+              title={d.hint}
+              active={status === d.key}
+              tone={d.key === "archived" ? "muted" : "status"}
+              onClick={() => pickStatus(d.key)}
+            />
+          ))}
 
           <div className="mx-1 h-5 w-px bg-zinc-300" aria-hidden />
 
-          <FilterButton
-            activeFilter={filter}
-            filter={Filter.date}
-            tone="refine"
-            onClick={() => toggleRefiner(Filter.date)}
-          />
-          <FilterButton
-            activeFilter={filter}
-            filter={Filter.affilate}
-            tone="refine"
-            onClick={() => toggleRefiner(Filter.affilate)}
-          />
-          <FilterButton
-            activeFilter={filter}
-            filter={Filter.category}
-            tone="refine"
-            onClick={() => toggleRefiner(Filter.category)}
-          />
+          {REFINERS.map((r) => (
+            <FilterButton
+              key={r.key}
+              label={r.label}
+              active={refiners.has(r.key)}
+              tone="refine"
+              onClick={() => toggleRefiner(r.key)}
+            />
+          ))}
         </div>
-        {isStatus(Filter.date) && (
+        {refiners.has("date") && (
           <div className="flex gap-3 items-center">
             <Input
               type="date"
@@ -460,13 +462,13 @@ export default function () {
             />
           </div>
         )}
-        {isStatus(Filter.affilate) && (
+        {refiners.has("affiliate") && (
           <div className="flex flex-wrap gap-2">
             {OrderService.instance.sourceList.map((source) => (
               <FilterButton
                 key={source}
-                filter={source}
-                activeFilter={affiliateFilter}
+                label={source}
+                active={affiliateFilter.has(source)}
                 tone="refine"
                 onClick={() => {
                   setPage(1);
@@ -480,13 +482,13 @@ export default function () {
           </div>
         )}
 
-        {isStatus(Filter.category) && (
+        {refiners.has("category") && (
           <div className="flex flex-wrap gap-2">
             {Object.entries(OrderItem).map(([key, value]) => (
               <FilterButton
                 key={key}
-                filter={value}
-                activeFilter={categoryFilter}
+                label={value}
+                active={categoryFilter.has(value)}
                 tone="refine"
                 onClick={() => {
                   setPage(1);
@@ -556,18 +558,19 @@ export default function () {
   );
 }
 
-function FilterButton<T>({
-  filter,
-  activeFilter,
+function FilterButton({
+  label,
+  active,
   onClick,
+  title,
   tone = "status",
 }: {
-  filter: T;
-  activeFilter: Set<T>;
+  label: string;
+  active: boolean;
   onClick: VoidFunction;
+  title?: string;
   tone?: "status" | "refine" | "muted";
 }) {
-  const active = activeFilter.has(filter);
   const on = tone === "refine"
     ? "bg-zinc-900 text-white border-zinc-900"
     : tone === "muted"
@@ -576,6 +579,7 @@ function FilterButton<T>({
   return (
     <button
       type="button"
+      title={title}
       aria-pressed={active}
       className={`w-fit px-3 py-1 text-xs font-medium cursor-pointer rounded-full border transition-colors ${
         active
@@ -584,7 +588,7 @@ function FilterButton<T>({
       }`}
       onClick={onClick}
     >
-      {String(filter)}
+      {label}
     </button>
   );
 }

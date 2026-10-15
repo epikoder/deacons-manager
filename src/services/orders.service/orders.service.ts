@@ -351,7 +351,14 @@ export default class OrderService extends SubscriberProvider<Order[]> {
     }
 
     if (param.source) {
-      query = query.in("source", param.source);
+      // Case-insensitive, like the earnings and report queries (ILIKE ANY): an order
+      // stamped "ella" belongs to source "Ella", and an exact match dropped it.
+      const sources = param.source
+        .map((v) => v.replace(/[%_(),"\\*]/g, "").trim())
+        .filter(Boolean);
+      query = sources.length
+        ? query.or(sources.map((v) => `source.ilike."${v}"`).join(","))
+        : query.in("source", []); // none chosen: nothing matches, as before
     }
 
     if (param.delivery_status) {
